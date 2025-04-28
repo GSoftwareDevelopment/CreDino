@@ -1,0 +1,21 @@
+
+    icl 'memory.inc'
+    icl 'dlist.inc'
+
+dl_g
+        dta DL_BLANK8
+        dta DL_BLANK8
+        dta DL_BLANK8 + DL_DLI ; SKY0
+        dta DL_MODE_40x24T5 + DL_LMS + DL_DLI, a(SCREEN_ADDR) ; SKY1
+        dta DL_MODE_40x24T5 + DL_LMS + DL_DLI, a(SCREEN_ADDR+44) ; SKY2
+        dta DL_MODE_40x24T5 + DL_LMS + DL_DLI, a(SCREEN_ADDR+88) ; SKY3
+        dta DL_MODE_40x24T5 + DL_DLI ; 128  SKY4
+        dta DL_MODE_40x24T5 + DL_DLI ; 168  GND0
+        ; ekran gry
+        dta DL_MODE_40x24T5 + DL_LMS, A(SCREEN_ADDR+ 208)
+    :14 dta DL_MODE_40x24T5
+        dta DL_MODE_40x24T5 + DL_DLI ; STS0
+        ; status
+        dta DL_MODE_40x24T5 + DL_LMS, a(STATUS_ADDR)
+    :2  dta DL_MODE_40x24T5
+        dta DL_JVB, a(dl_g)

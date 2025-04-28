@@ -1,0 +1,5464 @@
+mads 2.1.6
+Source: main.a65
+     1 				; ------------------------------------------------------------
+     2 				; Mad Pascal Compiler version 1.7.2 [2025/04/26] for MOS 6502 CPU
+     3 				; ------------------------------------------------------------
+     4
+     5 = 0010			STACKWIDTH	= 16
+     6 = 2000			CODEORIGIN	= $2000
+     7
+     8 = 0001			TRUE		= 1
+     9 = 0000			FALSE		= 0
+    10 = 009B			EOL		= $9B
+    11 = 0400			__BUFFER	= $0400
+    12 = 0400			@BUF		= __BUFFER
+    13
+    14 				; ------------------------------------------------------------
+    15
+    16 					org $80
+    17
+    18 				zpage
+    19
+    20 				.if .def(@vbxe_detect)
+    21 				fxptr	.ds 2						; VBXE pointer
+    22 				.fi
+    23
+    24 				.if .def(@AllocMem)||.def(MAIN.SYSTEM.GETMEM)||.def(MAIN.SYSTEM.FREEMEM)
+    25 				psptr	.ds 2						; PROGRAMSTACK Pointer
+    26 				.fi
+    27
+    28 = 0080			bp	.ds 2
+    29 = 0082			bp2	.ds 2
+    30 = 0081			bp3	= bp+1
+    31
+    32 = 0084			eax	.ds 4						;8 bytes (aex + edx) -> divREAL
+    33 = 0088			edx	.ds 4
+    34 = 008C			ecx	.ds 4
+    35
+    36 				TMP
+    37 				ztmp
+    38 = 0090			ztmp8	.ds 1
+    39 = 0091			ztmp9	.ds 1
+    40 = 0092			ztmp10	.ds 1
+    41 = 0093			ztmp11	.ds 1
+    42
+    43 = 0094			STACKORIGIN	.ds STACKWIDTH*4
+    44 				zpend
+    45
+    46 				; ------------------------------------------------------------
+    47
+    48 = 0084			ax	= eax
+    49 = 0084			al	= eax
+    50 = 0085			ah	= eax+1
+    51
+    52 = 008C			cx	= ecx
+    53 = 008C			cl	= ecx
+    54 = 008D			ch	= ecx+1
+    55
+    56 = 0088			dx	= edx
+    57 = 0088			dl	= edx
+    58 = 0089			dh	= edx+1
+    59
+    60 					org eax
+    61
+    62 = 0084			FP1MAN0	.ds 1
+    63 = 0085			FP1MAN1	.ds 1
+    64 = 0086			FP1MAN2	.ds 1
+    65 = 0087			FP1MAN3	.ds 1
+    66
+    67 					org edx
+    68
+    69 = 0088			FP2MAN0	.ds 1
+    70 = 0089			FP2MAN1	.ds 1
+    71 = 008A			FP2MAN2	.ds 1
+    72 = 008B			FP2MAN3	.ds 1
+    73
+    74 					org ecx
+    75
+    76 = 008C			FPMAN0	.ds 1
+    77 = 008D			FPMAN1	.ds 1
+    78 = 008E			FPMAN2	.ds 1
+    79 = 008F			FPMAN3	.ds 1
+    80
+    81 					org ztmp8
+    82
+    83 = 0090			FP1SGN	.ds 1
+    84 = 0091			FP1EXP	.ds 1
+    85
+    86 					org ztmp10
+    87
+    88 = 0092			FP2SGN	.ds 1
+    89 = 0093			FP2EXP	.ds 1
+    90
+    91 					org bp2
+    92
+    93 = 0082			FPSGN	.ds 1
+    94 = 0083			FPEXP	.ds 1
+    95
+    96 					.ifdef MAIN.@DEFINES.BASICOFF
+    97 					org CODEORIGIN
+    98 					icl 'atari\basicoff.asm'
+Source: basicoff.asm
+     1 				// BASIC OFF
+     2 				// author: Michael Jaskula
+     3 				// changes: 2023-03-28
+     4
+     5 				//	lda #$01		; OSS cart disabled
+     6 				//	sta $d508
+     7
+     8 FFFF> 2000-2040> AD 01 + 	lda PORTB
+     9 2003 09 02			ora #$02
+    10 2005 8D 01 D3			sta PORTB
+    11 					
+    12 2008 A9 70			lda #$70		; disable BREAK
+    13 200A 85 10			sta $10
+    14 200C 8D 0E D2			sta $D20E
+    15
+    16 200F A9 C0			lda #$C0
+    17 2011 85 6A			sta $6A
+    18 2013 8D E4 02			sta $2E4
+    19
+    20 2016 A9 01			lda #$01
+    21 2018 8D F8 03			sta $03F8
+    22
+    23 201B A2 00			ldx #0			; reset E:
+    24 201D A9 0C			lda #$0c
+    25 201F 20 38 20			jsr xcio
+    26
+    27 2022 A9 3E 9D 44 03 A9 + 	mwa #ename icbufa,x
+    28
+    29 202C A9 0C 9D 4A 03		mva #$0c icax1,x
+    30 2031 A9 00 9D 4B 03		mva #$00 icax2,x
+    31
+    32 2036 A9 03			lda #$03
+    33
+    34 2038 9D 42 03		xcio	sta iccmd,x
+    35
+    36 203B 4C 56 E4			jmp	ciov
+    37
+    38 203E 45 3A 9B		ename	.byte 'E:',$9b
+    99 02E2-02E3> 00 20			ini CODEORIGIN
+   100 					.fi
+   101
+   102 					.ifdef MAIN.@DEFINES.S_VBXE
+   103 					opt h-
+   104 					ins 'atari\s_vbxe\sdxld2.obx'
+   105 					opt h+
+   106 					.fi
+   107
+   108 2041				org CODEORIGIN
+   109
+   110 2000			.local	MAIN.@RESOURCE
+   111 				.endl
+   112
+   113 2000			.local	RESOURCE
+   114 2000				icl 'atari\resource.asm'
+Source: resource.asm
+     1
+  1469 					opt l+
+   115 = 0000				?EXTDETECT = 0
+   116 = 0000				?VBXDETECT = 0
+   117
+   118 2075				RMTPLAY 'music.feat' RMT_PLAYER 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RMTPLAY [Source: resource.asm]
+     2 = 0000			STEREOMODE	= 0
+     3 = 8C00			PLAYER		= main.RMT_PLAYER
+     6 2075				org $e0
+Source: rmt_player.asm
+    27 = 0004			TRACKS		equ 4
+    38 00E0			p_tis
+    39 00E0			p_instrstable		org *+2
+    40 00E2			p_trackslbstable	org *+2
+    41 00E4			p_trackshbstable	org *+2
+    42 00E6			p_song			org *+2
+    43 00E8			ns			org *+2
+    44 00EA			nr			org *+2
+    45 00EC			nt			org *+2
+    46 00EE			reg1			org *+1
+    47 00EF			reg2			org *+1
+    48 00F0			reg3			org *+1
+    49 00F1			tmp			org *+1
+    55 00F2			zp_end
+    60 00F2				org PLAYER-$400+$e0
+    62 88E0			track_variables
+    63 88E0			trackn_db	org *+TRACKS
+    64 88E4			trackn_hb	org *+TRACKS
+    65 88E8			trackn_idx	org *+TRACKS
+    66 88EC			trackn_pause	org *+TRACKS
+    67 88F0			trackn_note	org *+TRACKS
+    68 88F4			trackn_volume	org *+TRACKS
+    69 88F8			trackn_distor 	org *+TRACKS
+    70 88FC			trackn_shiftfrq	org *+TRACKS
+    78 8900			trackn_instrx2	org *+TRACKS
+    79 8904			trackn_instrdb	org *+TRACKS
+    80 8908			trackn_instrhb	org *+TRACKS
+    81 890C			trackn_instridx	org *+TRACKS
+    82 8910			trackn_instrlen	org *+TRACKS
+    83 8914			trackn_instrlop	org *+TRACKS
+    84 8918			trackn_instrreachend	org *+TRACKS
+    85 891C			trackn_volumeslidedepth org *+TRACKS
+    86 8920			trackn_volumeslidevalue org *+TRACKS
+    90 = 0001			FEAT_EFFECTS equ FEAT_EFFECTVIBRATO||FEAT_EFFECTFSHIFT
+    92 8924			trackn_effdelay			org *+TRACKS
+    95 8928			trackn_effvibratoa		org *+TRACKS
+    98 892C			trackn_effshift		org *+TRACKS
+   100 8930			trackn_tabletypespeed org *+TRACKS
+   104 8934			trackn_tablenote	org *+TRACKS
+   105 8938			trackn_tablea		org *+TRACKS
+   106 893C			trackn_tableend		org *+TRACKS
+   110 8940			trackn_tablespeeda	org *+TRACKS
+   120 8944			trackn_audf	org *+TRACKS
+   121 8948			trackn_audc	org *+TRACKS
+   125 894C			v_aspeed		org *+1
+   126 894D			track_endvariables
+   127 894D					org PLAYER-$100-$140-$40+2
+   128 = 000C			INSTRPAR	equ 12
+   129 8982			tabbeganddistor
+   130 8982-89BF> 80 00		 dta frqtabpure-frqtab,$00
+   131 8984 80 20		 dta frqtabpure-frqtab,$20
+   132 8986 80 40		 dta frqtabpure-frqtab,$40
+   133 8988 00 C0		 dta frqtabbass1-frqtab,$c0
+   134 898A 80 80		 dta frqtabpure-frqtab,$80
+   135 898C 80 A0		 dta frqtabpure-frqtab,$a0
+   136 898E 00 C0		 dta frqtabbass1-frqtab,$c0
+   137 8990 40 C0		 dta frqtabbass2-frqtab,$c0
+   139 8992 00 01 05 0B		vibtabbeg dta 0,vib1-vib0,vib2-vib0,vib3-vib0
+   140 8996 00			vib0	dta 0
+   141 8997 01 FF FF 01		vib1	dta 1,-1,-1,1
+   142 899B 01 00 FF FF 00 01	vib2	dta 1,0,-1,-1,0,1
+   143 89A1 01 01 00 FF FF FF + vib3	dta 1,1,0,-1,-1,-1,-1,0,1,1
+   144 89AB			vibtabnext
+   145 89AB 00					dta vib0-vib0+0
+   146 89AC 02 03 04 01				dta vib1-vib0+1,vib1-vib0+2,vib1-vib0+3,vib1-vib0+0
+   147 89B0 06 07 08 09 0A 05			dta vib2-vib0+1,vib2-vib0+2,vib2-vib0+3,vib2-vib0+4,vib2-vib0+5,vib2-vib0+0
+   148 89B6 0C 0D 0E 0F 10 11 + 		dta vib3-vib0+1,vib3-vib0+2,vib3-vib0+3,vib3-vib0+4,vib3-vib0+5,vib3-vib0+6,vib3-vib0+7,vib3-vib0+8,vib3-vib0+9,vib3-vib0+0
+   150 89C0					org PLAYER-$100-$140
+   158 89C0					org PLAYER-$100-$100
+   159 8A00			frqtab
+   161 8A00			frqtabbass1
+   162 8A00-8ABF> BF B6 AA A1 + 	dta $BF,$B6,$AA,$A1,$98,$8F,$89,$80,$F2,$E6,$DA,$CE,$BF,$B6,$AA,$A1
+   163 8A10 98 8F 89 80 7A 71 + 	dta $98,$8F,$89,$80,$7A,$71,$6B,$65,$5F,$5C,$56,$50,$4D,$47,$44,$3E
+   164 8A20 3C 38 35 32 2F 2D + 	dta $3C,$38,$35,$32,$2F,$2D,$2A,$28,$25,$23,$21,$1F,$1D,$1C,$1A,$18
+   165 8A30 17 16 14 13 12 11 + 	dta $17,$16,$14,$13,$12,$11,$10,$0F,$0E,$0D,$0C,$0B,$0A,$09,$08,$07
+   166 8A40			frqtabbass2
+   167 8A40 FF F1 E4 D8 CA C0 + 	dta $FF,$F1,$E4,$D8,$CA,$C0,$B5,$AB,$A2,$99,$8E,$87,$7F,$79,$73,$70
+   168 8A50 66 61 5A 55 52 4B + 	dta $66,$61,$5A,$55,$52,$4B,$48,$43,$3F,$3C,$39,$37,$33,$30,$2D,$2A
+   169 8A60 28 25 24 21 1F 1E + 	dta $28,$25,$24,$21,$1F,$1E,$1C,$1B,$19,$17,$16,$15,$13,$12,$11,$10
+   170 8A70 0F 0E 0D 0C 0B 0A + 	dta $0F,$0E,$0D,$0C,$0B,$0A,$09,$08,$07,$06,$05,$04,$03,$02,$01,$00
+   171 8A80			frqtabpure
+   172 8A80 F3 E6 D9 CC C1 B5 + 	dta $F3,$E6,$D9,$CC,$C1,$B5,$AD,$A2,$99,$90,$88,$80,$79,$72,$6C,$66
+   173 8A90 60 5B 55 51 4C 48 + 	dta $60,$5B,$55,$51,$4C,$48,$44,$40,$3C,$39,$35,$32,$2F,$2D,$2A,$28
+   174 8AA0 25 23 21 1F 1D 1C + 	dta $25,$23,$21,$1F,$1D,$1C,$1A,$18,$17,$16,$14,$13,$12,$11,$10,$0F
+   175 8AB0 0E 0D 0C 0B 0A 09 + 	dta $0E,$0D,$0C,$0B,$0A,$09,$08,$07,$06,$05,$04,$03,$02,$01,$00,$00
+   183 8AC0					org PLAYER-$0100
+   184 8B00			volumetab
+   185 8B00-8F31> 00 00 00 00 + 	dta $00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+   186 8B10 00 00 00 00 00 00 + 	dta $00,$00,$00,$00,$00,$00,$00,$00,$01,$01,$01,$01,$01,$01,$01,$01
+   187 8B20 00 00 00 00 01 01 + 	dta $00,$00,$00,$00,$01,$01,$01,$01,$01,$01,$01,$01,$02,$02,$02,$02
+   188 8B30 00 00 00 01 01 01 + 	dta $00,$00,$00,$01,$01,$01,$01,$01,$02,$02,$02,$02,$02,$03,$03,$03
+   189 8B40 00 00 01 01 01 01 + 	dta $00,$00,$01,$01,$01,$01,$02,$02,$02,$02,$03,$03,$03,$03,$04,$04
+   190 8B50 00 00 01 01 01 02 + 	dta $00,$00,$01,$01,$01,$02,$02,$02,$03,$03,$03,$04,$04,$04,$05,$05
+   191 8B60 00 00 01 01 02 02 + 	dta $00,$00,$01,$01,$02,$02,$02,$03,$03,$04,$04,$04,$05,$05,$06,$06
+   192 8B70 00 00 01 01 02 02 + 	dta $00,$00,$01,$01,$02,$02,$03,$03,$04,$04,$05,$05,$06,$06,$07,$07
+   193 8B80 00 01 01 02 02 03 + 	dta $00,$01,$01,$02,$02,$03,$03,$04,$04,$05,$05,$06,$06,$07,$07,$08
+   194 8B90 00 01 01 02 02 03 + 	dta $00,$01,$01,$02,$02,$03,$04,$04,$05,$05,$06,$07,$07,$08,$08,$09
+   195 8BA0 00 01 01 02 03 03 + 	dta $00,$01,$01,$02,$03,$03,$04,$05,$05,$06,$07,$07,$08,$09,$09,$0A
+   196 8BB0 00 01 01 02 03 04 + 	dta $00,$01,$01,$02,$03,$04,$04,$05,$06,$07,$07,$08,$09,$0A,$0A,$0B
+   197 8BC0 00 01 02 02 03 04 + 	dta $00,$01,$02,$02,$03,$04,$05,$06,$06,$07,$08,$09,$0A,$0A,$0B,$0C
+   198 8BD0 00 01 02 03 03 04 + 	dta $00,$01,$02,$03,$03,$04,$05,$06,$07,$08,$09,$0A,$0A,$0B,$0C,$0D
+   199 8BE0 00 01 02 03 04 05 + 	dta $00,$01,$02,$03,$04,$05,$06,$07,$07,$08,$09,$0A,$0B,$0C,$0D,$0E
+   200 8BF0 00 01 02 03 04 05 + 	dta $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0A,$0B,$0C,$0D,$0E,$0F
+   201 8C00				org PLAYER
+   205 8C00			RASTERMUSICTRACKER
+   206 8C00 4C D7 8D			jmp rmt_play
+   208 8C03 4C 12 8C			jmp rmt_init
+   209 8C06 4C F1 8D			jmp rmt_p3
+   210 8C09 4C 52 8C			jmp rmt_silence
+   211 8C0C 4C FC 8E			jmp SetPokey
+   213 8C0F 4C 65 8D			jmp rmt_sfx			;* A=note(0,..,60),X=channel(0,..,3 or 0,..,7),Y=instrument*2(0,2,4,..,126)
+   215 8C12			rmt_init
+   216 8C12 86 E8			stx ns
+   217 8C14 84 E9			sty ns+1
+   219 8C16 48				pha
+   229 8C17 A0 6D			ldy #track_endvariables-track_variables
+   230 8C19 A9 00			lda #0
+   231 8C1B 99 DF 88		ri0	sta track_variables-1,y
+   232 8C1E 88				dey
+   233 8C1F D0 FA			bne ri0
+   235 8C21 A0 04			ldy #4
+   236 8C23 B1 E8			lda (ns),y
+   237 8C25 8D E5 8D			sta v_maxtracklen
+   238 8C28 C8				iny
+   240 8C29 B1 E8			lda (ns),y
+   241 8C2B 8D B8 8C			sta v_speed
+   252 8C2E A0 08			ldy #8
+   253 8C30 B1 E8		ri1	lda (ns),y
+   254 8C32 99 D8 00			sta p_tis-8,y
+   255 8C35 C8				iny
+   256 8C36 C0 10			cpy #8+8
+   257 8C38 D0 F6			bne ri1
+   259 8C3A 68				pla
+   260 8C3B 48				pha
+   276 8C3C 0A				asl @
+   277 8C3D 0A				asl @
+   278 8C3E 18				clc
+   279 8C3F 65 E6			adc p_song
+   280 8C41 85 E6			sta p_song
+   281 8C43 68				pla
+   282 8C44 08				php
+   283 8C45 29 C0			and #$c0
+   284 8C47 0A				asl @
+   285 8C48 2A				rol @
+   286 8C49 2A				rol @
+   288 8C4A 28				plp
+   289 8C4B 65 E7			adc p_song+1
+   290 8C4D 85 E7			sta p_song+1
+   292 8C4F 20 67 8C			jsr GetSongLineTrackLineInitOfNewSetInstrumentsOnlyRmtp3
+   293 8C52			rmt_silence
+   307 8C52 A9 00			lda #0
+   308 8C54 8D 08 D2			sta $d208
+   309 8C57 A0 03			ldy #3
+   310 8C59 8C 0F D2			sty $d20f
+   311 8C5C A0 08			ldy #8
+   312 8C5E 99 00 D2		si1	sta $d200,y
+   313 8C61 88				dey
+   314 8C62 10 FA			bpl si1
+   319 8C64 A9 01			lda #FEAT_INSTRSPEED
+   321 8C66 60				rts
+   322 8C67			GetSongLineTrackLineInitOfNewSetInstrumentsOnlyRmtp3
+   323 8C67			GetSongLine
+   324 8C67 A2 00			ldx #0
+   325 8C69 8E E3 8D			stx v_abeat
+   326 8C6C			nn0
+   327 8C6C 8A			nn1	txa
+   328 8C6D A8				tay
+   329 8C6E B1 E6			lda (p_song),y
+   330 8C70 C9 FE			cmp #$fe
+   331 8C72 B0 2D			bcs nn2
+   332 8C74 A8				tay
+   333 8C75 B1 E2			lda (p_trackslbstable),y
+   334 8C77 9D E0 88			sta trackn_db,x
+   335 8C7A B1 E4			lda (p_trackshbstable),y
+   336 8C7C 9D E4 88		nn1a sta trackn_hb,x
+   337 8C7F A9 00			lda #0
+   338 8C81 9D E8 88			sta trackn_idx,x
+   339 8C84 A9 01			lda #1
+   340 8C86 9D EC 88		nn1a2 sta trackn_pause,x
+   341 8C89 A9 80			lda #$80
+   342 8C8B 9D 00 89			sta trackn_instrx2,x
+   343 8C8E E8				inx
+   344 8C8F E0 04		xtracks01	cpx #TRACKS
+   345 8C91 D0 D9			bne nn1
+   346 8C93 A5 E6			lda p_song
+   347 8C95 18				clc
+   348 8C96 69 04		xtracks02	adc #TRACKS
+   349 8C98 85 E6			sta p_song
+   350 8C9A 90 1B			bcc GetTrackLine
+   351 8C9C E6 E7			inc p_song+1
+   352 8C9E			nn1b
+   353 8C9E 4C B7 8C			jmp GetTrackLine
+   354 8CA1			nn2
+   355 8CA1 F0 04			beq nn3
+   356 8CA3			nn2a
+   357 8CA3 A9 00			lda #0
+   358 8CA5 F0 DF			beq nn1a2
+   359 8CA7			nn3
+   360 8CA7 A0 02			ldy #2
+   361 8CA9 B1 E6			lda (p_song),y
+   362 8CAB AA				tax
+   363 8CAC C8				iny
+   364 8CAD B1 E6			lda (p_song),y
+   365 8CAF 85 E7			sta p_song+1
+   366 8CB1 86 E6			stx p_song
+   367 8CB3 A2 00			ldx #0
+   368 8CB5 F0 B5			beq nn0
+   369 8CB7			GetTrackLine
+   370 8CB7			oo0
+   371 8CB7			oo0a
+   373 8CB7 A9 FF			lda #$ff
+   374 = 8CB8			v_speed equ *-1
+   375 8CB9 8D 0B 8D			sta v_bspeed
+   377 8CBC A2 FF			ldx #-1
+   378 8CBE			oo1
+   379 8CBE E8				inx
+   380 8CBF DE EC 88			dec trackn_pause,x
+   381 8CC2 D0 42			bne oo1x
+   382 8CC4			oo1b
+   383 8CC4 BD E0 88			lda trackn_db,x
+   384 8CC7 85 E8			sta ns
+   385 8CC9 BD E4 88			lda trackn_hb,x
+   386 8CCC 85 E9			sta ns+1
+   387 8CCE			oo1i
+   388 8CCE BC E8 88			ldy trackn_idx,x
+   389 8CD1 FE E8 88			inc trackn_idx,x
+   390 8CD4 B1 E8			lda (ns),y
+   391 8CD6 85 EE			sta reg1
+   392 8CD8 29 3F			and #$3f
+   393 8CDA C9 3D			cmp #61
+   394 8CDC F0 0E			beq oo1a
+   395 8CDE B0 35			bcs oo2
+   396 8CE0 9D F0 88			sta trackn_note,x
+   400 8CE3 C8				iny
+   401 8CE4 B1 E8			lda (ns),y
+   402 8CE6 4A				lsr @
+   403 8CE7 29 7E			and #$3f*2
+   404 8CE9 9D 00 89			sta trackn_instrx2,x
+   405 8CEC			oo1a
+   406 8CEC A9 01			lda #1
+   407 8CEE 9D EC 88			sta trackn_pause,x
+   408 8CF1 BC E8 88			ldy trackn_idx,x
+   409 8CF4 FE E8 88			inc trackn_idx,x
+   410 8CF7 B1 E8			lda (ns),y
+   411 8CF9 4A				lsr @
+   412 8CFA 66 EE			ror reg1
+   413 8CFC 4A				lsr @
+   414 8CFD 66 EE			ror reg1
+   415 8CFF A5 EE			lda reg1
+   423 8D01 29 F0			and #$f0
+   424 8D03 9D F4 88			sta trackn_volume,x
+   425 8D06			oo1x
+   426 8D06 E0 03		xtracks03sub1	cpx #TRACKS-1
+   427 8D08 D0 B4			bne oo1
+   429 8D0A A9 FF			lda #$ff
+   430 = 8D0B			v_bspeed equ *-1
+   431 8D0C 8D B8 8C			sta v_speed
+   435 8D0F 8D 4C 89			sta v_aspeed
+   436 8D12 4C 5A 8D			jmp InitOfNewSetInstrumentsOnly
+   437 8D15			oo2
+   438 8D15 C9 3F			cmp #63
+   439 8D17 F0 1B			beq oo63
+   440 8D19 A5 EE			lda reg1
+   441 8D1B 29 C0			and #$c0
+   442 8D1D F0 09			beq oo62_b
+   443 8D1F 0A				asl @
+   444 8D20 2A				rol @
+   445 8D21 2A				rol @
+   446 8D22 9D EC 88			sta trackn_pause,x
+   447 8D25 4C 06 8D			jmp oo1x
+   448 8D28			oo62_b
+   449 8D28 C8				iny
+   450 8D29 B1 E8			lda (ns),y
+   451 8D2B 9D EC 88			sta trackn_pause,x
+   452 8D2E FE E8 88			inc trackn_idx,x
+   453 8D31 4C 06 8D			jmp oo1x
+   454 8D34			oo63
+   455 8D34 A5 EE			lda reg1
+   457 8D36 30 0C			bmi oo63_1X
+   458 8D38 C8				iny
+   459 8D39 B1 E8			lda (ns),y
+   460 8D3B 8D 0B 8D			sta v_bspeed
+   461 8D3E FE E8 88			inc trackn_idx,x
+   462 8D41 4C CE 8C			jmp oo1i
+   463 8D44			oo63_1X
+   465 8D44 C9 FF			cmp #255
+   466 8D46 F0 09			beq oo63_11
+   467 8D48 C8				iny
+   468 8D49 B1 E8			lda (ns),y
+   469 8D4B 9D E8 88			sta trackn_idx,x
+   470 8D4E 4C CE 8C			jmp oo1i
+   471 8D51			oo63_11
+   472 8D51 4C 67 8C			jmp GetSongLine
+   473 8D54 4C F1 8D		p2xrmtp3	jmp rmt_p3
+   474 8D57 CA			p2x0 dex
+   475 8D58 30 FA			 bmi p2xrmtp3
+   476 8D5A			InitOfNewSetInstrumentsOnly
+   477 8D5A BC 00 89		p2x1 ldy trackn_instrx2,x
+   478 8D5D 30 F8			bmi p2x0
+   480 8D5F 20 6D 8D			jsr SetUpInstrumentY2
+   481 8D62 4C 57 8D			jmp p2x0
+   482 8D65			rmt_sfx
+   483 8D65 9D F0 88			sta trackn_note,x
+   487 8D68 A9 F0			lda #$f0				;* sfx note volume*16
+   488 = 8D69			RMTSFXVOLUME equ *-1		;* label for sfx note volume parameter overwriting
+   489 8D6A 9D F4 88			sta trackn_volume,x
+   491 8D6D			SetUpInstrumentY2
+   492 8D6D B1 E0			lda (p_instrstable),y
+   493 8D6F 9D 04 89			sta trackn_instrdb,x
+   494 8D72 85 EC			sta nt
+   495 8D74 C8				iny
+   496 8D75 B1 E0			lda (p_instrstable),y
+   497 8D77 9D 08 89			sta trackn_instrhb,x
+   498 8D7A 85 ED			sta nt+1
+   513 8D7C A0 02			ldy #2
+   515 8D7E B1 EC			lda (nt),y
+   516 8D80 9D 10 89			sta trackn_instrlen,x
+   517 8D83 C8				iny
+   518 8D84 B1 EC			lda (nt),y
+   519 8D86 9D 14 89			sta trackn_instrlop,x
+   520 8D89 C8				iny
+   521 8D8A B1 EC			lda (nt),y
+   522 8D8C 9D 30 89			sta trackn_tabletypespeed,x
+   526 8D8F 9D 40 89			sta trackn_tablespeeda,x
+   538 8D92 A0 06			ldy #6
+   540 8D94 B1 EC			lda (nt),y
+   541 8D96 9D 1C 89			sta trackn_volumeslidedepth,x
+   551 8D99 A0 08			ldy #8
+   555 8D9B B1 EC			lda (nt),y
+   556 8D9D 9D 24 89			sta trackn_effdelay,x
+   558 8DA0 C8				iny
+   559 8DA1 B1 EC			lda (nt),y
+   560 8DA3 A8				tay
+   561 8DA4 B9 92 89			lda vibtabbeg,y
+   562 8DA7 9D 28 89			sta trackn_effvibratoa,x
+   565 8DAA A0 0A			ldy #10
+   566 8DAC B1 EC			lda (nt),y
+   567 8DAE 9D 2C 89			sta trackn_effshift,x
+   570 8DB1 A9 80			lda #128
+   571 8DB3 9D 20 89			sta trackn_volumeslidevalue,x
+   572 8DB6 9D 00 89			sta trackn_instrx2,x
+   573 8DB9 0A				asl @
+   574 8DBA 9D 18 89			sta trackn_instrreachend,x
+   575 8DBD 9D FC 88			sta trackn_shiftfrq,x
+   576 8DC0 A8				tay
+   577 8DC1 B1 EC			lda (nt),y
+   578 8DC3 9D 3C 89			sta trackn_tableend,x
+   579 8DC6 69 00			adc #0
+   580 8DC8 9D 0C 89			sta trackn_instridx,x
+   581 8DCB A9 0C			lda #INSTRPAR
+   582 8DCD 9D 38 89			sta trackn_tablea,x
+   583 8DD0 A8				tay
+   584 8DD1 B1 EC			lda (nt),y
+   585 8DD3 9D 34 89			sta trackn_tablenote,x
+   586 8DD6			xata_rtshere
+   588 8DD6 60				rts
+   592 8DD7			rmt_play
+   593 8DD7			rmt_p0
+   594 8DD7 20 FC 8E			jsr SetPokey
+   595 8DDA			rmt_p1
+   608 8DDA			rmt_p2
+   609 8DDA CE 4C 89			dec v_aspeed
+   610 8DDD D0 12			bne rmt_p3
+   611 8DDF EE E3 8D			inc v_abeat
+   612 8DE2 A9 FF			lda #$ff
+   613 = 8DE3			v_abeat equ *-1
+   614 8DE4 C9 FF			cmp #$ff
+   615 = 8DE5			v_maxtracklen equ *-1
+   616 8DE6 F0 03			beq p2o3
+   617 8DE8 4C B7 8C			jmp GetTrackLine
+   618 8DEB			p2o3
+   619 8DEB 4C 67 8C			jmp GetSongLineTrackLineInitOfNewSetInstrumentsOnlyRmtp3
+   620 8DEE 4C EB 8E		go_ppnext	jmp ppnext
+   621 8DF1			rmt_p3
+   622 8DF1 A9 8A			lda #>frqtab
+   623 8DF3 85 EB			sta nr+1
+   624 8DF5 A2 03		xtracks05sub1	ldx #TRACKS-1
+   625 8DF7			pp1
+   626 8DF7 BD 08 89			lda trackn_instrhb,x
+   627 8DFA F0 F2			beq go_ppnext
+   628 8DFC 85 E9			sta ns+1
+   629 8DFE BD 04 89			lda trackn_instrdb,x
+   630 8E01 85 E8			sta ns
+   631 8E03 BC 0C 89			ldy trackn_instridx,x
+   632 8E06 B1 E8			lda (ns),y
+   633 8E08 85 EE			sta reg1
+   634 8E0A C8				iny
+   635 8E0B B1 E8			lda (ns),y
+   636 8E0D 85 EF			sta reg2
+   637 8E0F C8				iny
+   638 8E10 B1 E8			lda (ns),y
+   639 8E12 85 F0			sta reg3
+   640 8E14 C8				iny
+   641 8E15 98				tya
+   642 8E16 DD 10 89			cmp trackn_instrlen,x
+   643 8E19 90 0A			bcc pp2
+   644 8E1B F0 08			beq pp2
+   645 8E1D A9 80			lda #$80
+   646 8E1F 9D 18 89			sta trackn_instrreachend,x
+   647 8E22			pp1b
+   648 8E22 BD 14 89			lda trackn_instrlop,x
+   649 8E25 9D 0C 89		pp2	sta trackn_instridx,x
+   650 8E28 A5 EE			lda reg1
+   660 8E2A 29 0F			and #$0f
+   661 8E2C 1D F4 88			ora trackn_volume,x
+   662 8E2F A8				tay
+   663 8E30 B9 00 8B			lda volumetab,y
+   664 8E33 85 F1			sta tmp
+   665 8E35 A5 EF			lda reg2
+   666 8E37 29 0E			and #$0e
+   667 8E39 A8				tay
+   668 8E3A B9 82 89			lda tabbeganddistor,y
+   669 8E3D 85 EA			sta nr
+   670 8E3F A5 F1			lda tmp
+   671 8E41 19 83 89			ora tabbeganddistor+1,y
+   672 8E44 9D 48 89			sta trackn_audc,x
+   673 8E47			InstrumentsEffects
+   675 8E47 BD 24 89			lda trackn_effdelay,x
+   676 8E4A F0 21			beq ei2
+   677 8E4C C9 01			cmp #1
+   678 8E4E D0 1A			bne ei1
+   679 8E50 BD FC 88			lda trackn_shiftfrq,x
+   681 8E53 18				clc
+   682 8E54 7D 2C 89			adc trackn_effshift,x
+   685 8E57 18				clc
+   686 8E58 BC 28 89			ldy trackn_effvibratoa,x
+   687 8E5B 79 96 89			adc vib0,y
+   689 8E5E 9D FC 88			sta trackn_shiftfrq,x
+   691 8E61 B9 AB 89			lda vibtabnext,y
+   692 8E64 9D 28 89			sta trackn_effvibratoa,x
+   694 8E67 4C 6D 8E			jmp ei2
+   695 8E6A			ei1
+   696 8E6A DE 24 89			dec trackn_effdelay,x
+   697 8E6D			ei2
+   699 8E6D BC 3C 89			ldy trackn_tableend,x
+   700 8E70 C0 0D			cpy #INSTRPAR+1
+   701 8E72 90 30			bcc ei3
+   702 8E74 BD 40 89			lda trackn_tablespeeda,x
+   703 8E77 10 25			bpl ei2f
+   704 8E79			ei2c
+   705 8E79 98				tya
+   706 8E7A DD 38 89			cmp trackn_tablea,x
+   707 8E7D D0 07			bne ei2c2
+   711 8E7F A9 0C			lda #INSTRPAR
+   713 8E81 9D 38 89			sta trackn_tablea,x
+   714 8E84 D0 03			bne ei2a
+   715 8E86			ei2c2
+   716 8E86 FE 38 89			inc trackn_tablea,x
+   717 8E89			ei2a
+   718 8E89 BD 04 89			lda trackn_instrdb,x
+   719 8E8C 85 EC			sta nt
+   720 8E8E BD 08 89			lda trackn_instrhb,x
+   721 8E91 85 ED			sta nt+1
+   722 8E93 BC 38 89			ldy trackn_tablea,x
+   723 8E96 B1 EC			lda (nt),y
+   731 8E98 9D 34 89			sta trackn_tablenote,x
+   732 8E9B BD 30 89			lda trackn_tabletypespeed,x
+   736 8E9E			ei2f
+   737 8E9E 38				sec
+   738 8E9F E9 01			sbc #1
+   739 8EA1 9D 40 89			sta trackn_tablespeeda,x
+   740 8EA4			ei3
+   741 8EA4 BD 18 89			lda trackn_instrreachend,x
+   742 8EA7 10 18			bpl ei4
+   743 8EA9 BD F4 88			lda trackn_volume,x
+   744 8EAC F0 13			beq ei4
+   750 8EAE A8				tay
+   751 8EAF BD 20 89			lda trackn_volumeslidevalue,x
+   752 8EB2 18				clc
+   753 8EB3 7D 1C 89			adc trackn_volumeslidedepth,x
+   754 8EB6 9D 20 89			sta trackn_volumeslidevalue,x
+   755 8EB9 90 06			bcc ei4
+   756 8EBB 98				tya
+   757 8EBC E9 10			sbc #16
+   758 8EBE 9D F4 88			sta trackn_volume,x
+   759 8EC1			ei4
+   765 8EC1 A5 EF			lda reg2
+   769 8EC3 29 70			and #$70
+   771 8EC5 F0 05			beq cmd0
+   811 8EC7			cmd1
+   813 8EC7 A5 F0			lda reg3
+   814 8EC9 4C E8 8E			jmp cmd0c
+   816 8ECC			cmd2
+   823 8ECC			cmd3
+   831 8ECC			cmd4
+   840 8ECC			cmd5
+   883 8ECC			cmd6
+   895 8ECC			cmd7
+   915 8ECC			cmd0
+   916 8ECC BD F0 88			lda trackn_note,x
+   917 8ECF 18				clc
+   918 8ED0 65 F0			adc reg3
+   919 8ED2			cmd0a
+   924 8ED2 18				clc
+   925 8ED3 7D 34 89			adc trackn_tablenote,x
+   926 8ED6 C9 3D			cmp #61
+   927 8ED8 90 07			bcc cmd0a1
+   928 8EDA A9 00			lda #0
+   929 8EDC 9D 48 89			sta trackn_audc,x
+   930 8EDF A9 3F			lda #63
+   931 8EE1			cmd0a1
+   935 8EE1 A8				tay
+   936 8EE2 B1 EA			lda (nr),y
+   937 8EE4 18				clc
+   938 8EE5 7D FC 88			adc trackn_shiftfrq,x
+   963 8EE8			cmd0c
+   964 8EE8 9D 44 89			sta trackn_audf,x
+   965 8EEB			pp9
+  1001 8EEB			ppnext
+  1002 8EEB CA				dex
+  1003 8EEC 30 03			bmi rmt_p4
+  1004 8EEE 4C F7 8D			jmp pp1
+  1005 8EF1			rmt_p4
+  1013 8EF1 A2 00			ldx #0
+  1015 8EF3			qq1
+  1016 8EF3 8E FD 8E			stx v_audctl
+  1122 8EF6			qq5
+  1123 8EF6 8E FD 8E			stx v_audctl
+  1243 8EF9			rmt_p5
+  1248 8EF9 A9 01			lda #1
+  1250 8EFB 60				rts
+  1251 8EFC			SetPokey
+  1292 8EFC A0 FF			ldy #$ff
+  1293 = 8EFD			v_audctl equ *-1
+  1294 8EFE AD 44 89			lda trackn_audf+0
+  1295 8F01 AE 48 89			ldx trackn_audc+0
+  1296 8F04 8D 00 D2			sta $d200
+  1297 8F07 8E 01 D2			stx $d201
+  1298 8F0A AD 45 89			lda trackn_audf+1
+  1299 8F0D AE 49 89			ldx trackn_audc+1
+  1300 8F10 8D 02 D2			sta $d200+2
+  1301 8F13 8E 03 D2			stx $d201+2
+  1302 8F16 AD 46 89			lda trackn_audf+2
+  1303 8F19 AE 4A 89			ldx trackn_audc+2
+  1304 8F1C 8D 04 D2			sta $d200+4
+  1305 8F1F 8E 05 D2			stx $d201+4
+  1306 8F22 AD 47 89			lda trackn_audf+3
+  1307 8F25 AE 4B 89			ldx trackn_audc+3
+  1308 8F28 8D 06 D2			sta $d200+6
+  1309 8F2B 8E 07 D2			stx $d201+6
+  1310 8F2E 8C 08 D2			sty $d208
+  1359 8F31 60				rts
+  1360 8F32			RMTPLAYEREND
+     3 = 0001			FEAT_SFX		equ 1
+     4 = 0000			FEAT_GLOBALVOLUMEFADE	equ 0		;RMTGLOBALVOLUMEFADE variable
+     5 = 0000			FEAT_NOSTARTINGSONGLINE	equ 0
+     6 = 0001			FEAT_INSTRSPEED		equ 1
+     7 = 0000			FEAT_CONSTANTSPEED		equ 0		;(13 times)
+     8 = 0001			FEAT_COMMAND1		equ 1		;(7 times)
+     9 = 0000			FEAT_COMMAND2		equ 0		;(0 times)
+    10 = 0000			FEAT_COMMAND3		equ 0		;(0 times)
+    11 = 0000			FEAT_COMMAND4		equ 0		;(0 times)
+    12 = 0000			FEAT_COMMAND5		equ 0		;(0 times)
+    13 = 0000			FEAT_COMMAND6		equ 0		;(0 times)
+    14 = 0000			FEAT_COMMAND7SETNOTE		equ 0		;(0 times)
+    15 = 0000			FEAT_COMMAND7VOLUMEONLY		equ 0		;(0 times)
+    16 = 0000			FEAT_PORTAMENTO		equ 0		;(0 times)
+    17 = 0000			FEAT_FILTER		equ 0		;(0 times)
+    18 = 0000			FEAT_FILTERG0L		equ 0		;(0 times)
+    19 = 0000			FEAT_FILTERG1L		equ 0		;(0 times)
+    20 = 0000			FEAT_FILTERG0R		equ 0		;(0 times)
+    21 = 0000			FEAT_FILTERG1R		equ 0		;(0 times)
+    22 = 0000			FEAT_BASS16		equ 0		;(0 times)
+    23 = 0000			FEAT_BASS16G1L		equ 0		;(0 times)
+    24 = 0000			FEAT_BASS16G3L		equ 0		;(0 times)
+    25 = 0000			FEAT_BASS16G1R		equ 0		;(0 times)
+    26 = 0000			FEAT_BASS16G3R		equ 0		;(0 times)
+    27 = 0000			FEAT_VOLUMEONLYG0L		equ 0		;(0 times)
+    28 = 0000			FEAT_VOLUMEONLYG2L		equ 0		;(0 times)
+    29 = 0000			FEAT_VOLUMEONLYG3L		equ 0		;(0 times)
+    30 = 0000			FEAT_VOLUMEONLYG0R		equ 0		;(0 times)
+    31 = 0000			FEAT_VOLUMEONLYG2R		equ 0		;(0 times)
+    32 = 0000			FEAT_VOLUMEONLYG3R		equ 0		;(0 times)
+    33 = 0000			FEAT_TABLETYPE		equ 0		;(0 times)
+    34 = 0000			FEAT_TABLEMODE		equ 0		;(0 times)
+    35 = 0000			FEAT_TABLEGO		equ 0		;(0 times)
+    36 = 0000			FEAT_AUDCTLMANUALSET		equ 0		;(0 times)
+    37 = 0000			FEAT_VOLUMEMIN		equ 0		;(0 times)
+    38 = 0001			FEAT_EFFECTVIBRATO		equ 1		;(3 times)
+    39 = 0001			FEAT_EFFECTFSHIFT		equ 1		;(2 times)
+    19 					.echo '$R RMTPLAY ',p_tis,'..',zp_end-1,', ',track_variables,'..',RMTPLAYEREND-1," 'music.feat'"
+    19 				$R RMTPLAY $00E0..$00F1, $88E0..$8F31 'music.feat'
+Source: main.a65
+   119 8F32				RCDATA 'assets/title.fnt' FNT_TITLE 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RCDATA [Source: resource.asm]
+     2 = 0800			len = .filesize('assets/title.fnt')-0
+    26 8F32				org main.FNT_TITLE
+    28 9000-9CAF> 55 55 55 55 + 	ins 'assets/title.fnt',0
+    30 					.print '$R RCDATA  ',main.FNT_TITLE,'..',*-1," 'assets/title.fnt'"
+    30 				$R RCDATA  $9000..$97FF 'assets/title.fnt'
+Source: main.a65
+   120 9800				RCDATA 'assets/title.scr' SCR_TITLE 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RCDATA [Source: resource.asm]
+     2 = 04B0			len = .filesize('assets/title.scr')-0
+    26 9800				org main.SCR_TITLE
+    28 9800 01 01 01 01 81 81 + 	ins 'assets/title.scr',0
+    30 					.print '$R RCDATA  ',main.SCR_TITLE,'..',*-1," 'assets/title.scr'"
+    30 				$R RCDATA  $9800..$9CAF 'assets/title.scr'
+Source: main.a65
+   121 9CB0				RCDATA 'assets/status.fnt' FNT_STATUS 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RCDATA [Source: resource.asm]
+     2 = 0400			len = .filesize('assets/status.fnt')-0
+    26 9CB0				org main.FNT_STATUS
+    28 A400-A877> 00 00 00 00 + 	ins 'assets/status.fnt',0
+    30 					.print '$R RCDATA  ',main.FNT_STATUS,'..',*-1," 'assets/status.fnt'"
+    30 				$R RCDATA  $A400..$A7FF 'assets/status.fnt'
+Source: main.a65
+   122 A800				RCDATA 'assets/status.dat' STATUS_ADDR 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RCDATA [Source: resource.asm]
+     2 = 0078			len = .filesize('assets/status.dat')-0
+    26 A800				org main.STATUS_ADDR
+    28 A800 4B 50 6E 6E 6E 6E + 	ins 'assets/status.dat',0
+    30 					.print '$R RCDATA  ',main.STATUS_ADDR,'..',*-1," 'assets/status.dat'"
+    30 				$R RCDATA  $A800..$A877 'assets/status.dat'
+Source: main.a65
+   123 A878				RCDATA 'assets/game.fnt' FNT_GAME 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RCDATA [Source: resource.asm]
+     2 = 0400			len = .filesize('assets/game.fnt')-0
+    26 A878				org main.FNT_GAME
+    28 AC00-AFFF> 00 00 00 00 + 	ins 'assets/game.fnt',0
+    30 					.print '$R RCDATA  ',main.FNT_GAME,'..',*-1," 'assets/game.fnt'"
+    30 				$R RCDATA  $AC00..$AFFF 'assets/game.fnt'
+Source: main.a65
+   124 B000				RCDATA 'assets/gameover.dat' GOVER_ADDR 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RCDATA [Source: resource.asm]
+     2 = 0078			len = .filesize('assets/gameover.dat')-0
+    26 B000				org main.GOVER_ADDR
+    28 A880-AB77> 00 00 00 00 + 	ins 'assets/gameover.dat',0
+    30 					.print '$R RCDATA  ',main.GOVER_ADDR,'..',*-1," 'assets/gameover.dat'"
+    30 				$R RCDATA  $A880..$A8F7 'assets/gameover.dat'
+Source: main.a65
+   125 A8F8				RCDATA 'assets/crater.dat' CRATER_ADDR 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RCDATA [Source: resource.asm]
+     2 = 0280			len = .filesize('assets/crater.dat')-0
+    26 A8F8				org main.CRATER_ADDR
+    28 A8F8 00 42 C1 C1 C1 C1 + 	ins 'assets/crater.dat',0
+    30 					.print '$R RCDATA  ',main.CRATER_ADDR,'..',*-1," 'assets/crater.dat'"
+    30 				$R RCDATA  $A8F8..$AB77 'assets/crater.dat'
+Source: main.a65
+   126 AB78				RCASM 'assets/sprites.a65' SPR_ADDR 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RCASM [Source: resource.asm]
+     2 AB78				org RESORIGIN
+     4 = 0170			len = .sizeof(_SPR_ADDR)
+     6 				mcpy	ift main.SPR_ADDR+len >= $bc20
+    11 2075-2205> 20 41 20		jsr sys.off
+    13 2078 A9 96 85 88 A9 20 +  MWA #DATA EDX
+    13 2080 A9 00 85 8C A9 B0 +  MWA #MAIN.SPR_ADDR ECX
+    13 2088 A9 70 85 84 A9 01 +  MWA #LEN EAX
+    13 2090 20 00 20		 JSR RESOURCE.MEMCPY
+    15 2093 4C 65 20			jmp sys.on
+    16 2096			data
+Source: sprites.a65
+     1 = 9000			FNT_TITLE     = $9000;
+     2 = 9800			SCR_TITLE     = $9800;
+     3 = 8C00			RMT_PLAYER    = $8c00;
+     5 = A400			FNT_STATUS    = $a400;
+     6 = A800			STATUS_ADDR   = $a800;
+     7 = A880			GOVER_ADDR    = $a880;
+     8 = A8F8			CRATER_ADDR   = $a8f8;
+    10 = AC00			FNT_GAME      = $ac00;
+    12 = B000			PMG_ADDR      = $B000;
+    13 = B000			SPR_ADDR      = $B000;
+    15 = B800			SCREEN_ADDR   = $b800;
+    17 = BF90			DL_TITLE      = $bf90;
+    18 = BFD0			DL_GAME       = $bfd0;
+    20 = C000			RMT_MODUL     = $c000;
+    24 = 0050			PTR1 = $50;
+    25 = 0052			PTR2 = $52;
+    26 = 0054			PTR3 = $54;
+     3 B000			start:
+     9 B000			SPR_0_FRM_0
+    10 B000 3E 71 FB F1 E1 86 +   dta $3e, $71, $fb, $f1, $e1, $86, $42, $5a, $5e, $5e, $4e, $c2, $c2, $42, $54, $68
+    12 B010			SPR_0_FRM_1
+    13 B010 3E 71 FB F1 E1 86 +   dta $3e, $71, $fb, $f1, $e1, $86, $5a, $5e, $5e, $4e, $c2, $e2, $62, $26, $28, $10
+    15 B020			SPR_0_FRM_2
+    16 B020 7C 8E DF 8F 87 61 +   dta $7c, $8e, $df, $8f, $87, $61, $42, $5a, $7a, $7a, $72, $43, $43, $42, $2a, $16
+    18 B030			SPR_0_FRM_3
+    19 B030 7C 8E DF 8F 87 61 +   dta $7c, $8e, $df, $8f, $87, $61, $5a, $7a, $7a, $72, $43, $47, $46, $64, $14, $08
+    21 B040			SPR_0_FRM_4
+    22 B040 38 44 82 82 82 82 +   dta $38, $44, $82, $82, $82, $82, $82, $82, $66, $42, $4f, $5f, $7e, $5a, $54, $28
+    24 B050			SPR_0_FRM_5
+    25 B050 1C 22 41 41 41 41 +   dta $1c, $22, $41, $41, $41, $41, $41, $41, $66, $42, $f2, $fa, $7e, $5a, $2a, $14
+    27 B060			SPR_0_FRM_6
+    28 B060 38 7C FE FE EE AA +   dta $38, $7c, $fe, $fe, $ee, $aa, $44, $38, $44, $42, $ab, $bb, $ba, $92, $54, $28
+    30 B070			SPR_0_FRM_7
+    31 B070 1C 3E 7F 7F 77 55 +   dta $1c, $3e, $7f, $7f, $77, $55, $22, $1c, $22, $42, $d5, $dd, $5d, $49, $2a, $14
+    33 B080			SPR_0_FRM_8
+    34 B080 00 14 00 40 02 28 +   dta $00, $14, $00, $40, $02, $28, $00, $1c, $22, $5d, $7f, $63, $77, $5d, $49, $36
+    36 B090			SPR_0_FRM_9
+    37 B090 00 28 00 02 40 14 +   dta $00, $28, $00, $02, $40, $14, $00, $1c, $22, $5d, $7f, $63, $77, $5d, $49, $36
+    41 B0A0			SPR_1_FRM_0
+    42 B0A0 00 3E 54 5E 7E 78 +   dta $00, $3e, $54, $5e, $7e, $78, $3c, $3c, $3c, $3c, $3c, $7c, $7c, $3c, $28, $00
+    44 B0B0			SPR_1_FRM_1
+    45 B0B0 00 3E 54 5E 7E 78 +   dta $00, $3e, $54, $5e, $7e, $78, $3c, $3c, $3c, $3c, $7c, $7c, $3c, $18, $10, $00
+    47 B0C0			SPR_1_FRM_2
+    48 B0C0 00 7C 2A 7A 7E 1E +   dta $00, $7c, $2a, $7a, $7e, $1e, $3c, $3c, $3c, $3c, $3c, $3e, $3e, $3c, $14, $00
+    50 B0D0			SPR_1_FRM_3
+    51 B0D0 00 7C 2A 7A 7E 1E +   dta $00, $7c, $2a, $7a, $7e, $1e, $3c, $3c, $3c, $3c, $3e, $3e, $3c, $18, $08, $00
+    53 B0E0			SPR_1_FRM_4
+    54 B0E0 00 38 7C 7C 7C 7C +   dta $00, $38, $7c, $7c, $7c, $7c, $7c, $7c, $18, $3c, $32, $2e, $1c, $3c, $28, $00
+    56 B0F0			SPR_1_FRM_5
+    57 B0F0 00 1C 3E 3E 3E 3E +   dta $00, $1c, $3e, $3e, $3e, $3e, $3e, $3e, $18, $3c, $4c, $74, $38, $3c, $14, $00
+    59 B100			SPR_1_FRM_6
+    60 B100 00 38 54 54 7C 54 +   dta $00, $38, $54, $54, $7c, $54, $38, $00, $38, $3c, $7e, $7e, $7c, $7c, $28, $00
+    62 B110			SPR_1_FRM_7
+    63 B110 00 1C 2A 2A 3E 2A +   dta $00, $1c, $2a, $2a, $3e, $2a, $1c, $00, $1c, $3c, $7e, $7e, $3e, $3e, $14, $00
+    65 B120			SPR_1_FRM_8
+    66 B120 00 14 00 40 02 28 +   dta $00, $14, $00, $40, $02, $28, $00, $00, $1c, $22, $1c, $1c, $2a, $36, $36, $00
+    68 B130			SPR_1_FRM_9
+    69 B130 00 28 00 02 40 14 +   dta $00, $28, $00, $02, $40, $14, $00, $00, $1c, $22, $1c, $1c, $2a, $36, $36, $00
+    73 B140			SPR_2_FRM_0
+    74 B140 00 00 00 00 02 00 +   dta $00, $00, $00, $00, $02, $00, $04, $00, $12, $00, $04, $60, $f0, $f0, $f0, $e0
+    76 B150			SPR_2_FRM_1
+    77 B150 00 00 00 00 01 04 +   dta $00, $00, $00, $00, $01, $04, $00, $0a, $00, $24, $08, $60, $f4, $f0, $f0, $e0
+    83 B160			SPR_3_FRM_0
+    84 B160 CA 39 4E BF BF 4E +   dta $ca, $39, $4e, $bf, $bf, $4e, $39, $45
+    86 B168			SPR_3_FRM_1
+    87 B168 45 39 4E BF BF 4E +   dta $45, $39, $4e, $bf, $bf, $4e, $39, $ca
+    23 02E2-02E3> 75 20			ini mcpy
+    25 					.print '$R RCASM   ',main.SPR_ADDR,'..',main.SPR_ADDR+len-1," 'assets/sprites.a65'"
+    25 				$R RCASM   $B000..$B16F 'assets/sprites.a65'
+Source: main.a65
+   127 2206				RCASM 'dl_title.a65' DL_TITLE 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RCASM [Source: resource.asm]
+     2 2206				org RESORIGIN
+     4 = 0021			len = .sizeof(_DL_TITLE)
+     6 				mcpy	ift main.DL_TITLE+len >= $bc20
+     7 2075-20BE> A9 00 8D 2F + 	mva #0 sdmctl
+     8 207A 8D 00 D4			sta dmactl
+    11 207D 20 41 20			jsr sys.off
+    13 2080 A9 9E 85 88 A9 20 +  MWA #DATA EDX
+    13 2088 A9 90 85 8C A9 BF +  MWA #MAIN.DL_TITLE ECX
+    13 2090 A9 21 85 84 A9 00 +  MWA #LEN EAX
+    13 2098 20 00 20		 JSR RESOURCE.MEMCPY
+    15 209B 4C 65 20			jmp sys.on
+    16 209E			data
+     1 = 9000			FNT_TITLE     = $9000;
+     2 = 9800			SCR_TITLE     = $9800;
+     3 = 8C00			RMT_PLAYER    = $8c00;
+     5 = A400			FNT_STATUS    = $a400;
+     6 = A800			STATUS_ADDR   = $a800;
+     7 = A880			GOVER_ADDR    = $a880;
+     8 = A8F8			CRATER_ADDR   = $a8f8;
+    10 = AC00			FNT_GAME      = $ac00;
+    12 = B000			PMG_ADDR      = $B000;
+    13 = B000			SPR_ADDR      = $B000;
+    15 = B800			SCREEN_ADDR   = $b800;
+    17 = BF90			DL_TITLE      = $bf90;
+    18 = BFD0			DL_GAME       = $bfd0;
+    20 = C000			RMT_MODUL     = $c000;
+    24 = 0050			PTR1 = $50;
+    25 = 0052			PTR2 = $52;
+    26 = 0054			PTR3 = $54;
+     5 = 0000			DL_BLANK1 = 0; // 1 blank line
+     6 = 0010			DL_BLANK2 = %00010000; // 2 blank lines
+     7 = 0020			DL_BLANK3 = %00100000; // 3 blank lines
+     8 = 0030			DL_BLANK4 = %00110000; // 4 blank lines
+     9 = 0040			DL_BLANK5 = %01000000; // 5 blank lines
+    10 = 0050			DL_BLANK6 = %01010000; // 6 blank lines
+    11 = 0060			DL_BLANK7 = %01100000; // 7 blank lines
+    12 = 0070			DL_BLANK8 = %01110000; // 8 blank lines
+    14 = 0080			DL_DLI = %10000000; // Order to run DLI
+    15 = 0040			DL_LMS = %01000000; // Order to set new memory address
+    16 = 0020			DL_VSCROLL = %00100000; // Turn on vertical scroll on this line
+    17 = 0010			DL_HSCROLL = %00010000; // Turn on horizontal scroll on this line
+    19 = 0002			DL_MODE_40x24T2 = 2; // Antic Modes
+    20 = 0004			DL_MODE_40x24T5 = 4;
+    21 = 0005			DL_MODE_40x12T5 = 5;
+    22 = 0006			DL_MODE_20x24T5 = 6;
+    23 = 0007			DL_MODE_20x12T5 = 7;
+    24 = 0008			DL_MODE_40x24G4 = 8;
+    25 = 0009			DL_MODE_80x48G2 = 9;
+    26 = 000A			DL_MODE_80x48G4 = $A;
+    27 = 000B			DL_MODE_160x96G2 = $B;
+    28 = 000C			DL_MODE_160x192G2 = $C;
+    29 = 000D			DL_MODE_160x96G4 = $D;
+    30 = 000E			DL_MODE_160x192G4 = $E;
+    31 = 000F			DL_MODE_320x192G2 = $F;
+    33 = 0001			DL_JMP = %00000001; // Order to jump
+    34 = 0041			DL_JVB = %01000001; // Jump to begining
+     5 BF90			dl_s
+     6 BF90 70			        dta DL_BLANK8
+     7 BF91 70			        dta DL_BLANK8
+     8 BF92 30			        dta DL_BLANK4
+    10 BF93 44 00 98		        dta DL_MODE_40x24T5 + DL_LMS, a(SCR_TITLE)  ; 1
+    11 BF96 04			        dta DL_MODE_40x24T5                         ; 7
+    12 BF97 04			        dta DL_MODE_40x24T5                         ; 8
+    13 BF98 04			        dta DL_MODE_40x24T5                         ; 9
+    14 BF99 04			        dta DL_MODE_40x24T5                         ; 10
+    15 BF9A 04			        dta DL_MODE_40x24T5                         ; 11
+    16 BF9B 04			        dta DL_MODE_40x24T5                         ; 12
+    17 BF9C 04			        dta DL_MODE_40x24T5                         ; 13
+    18 BF9D 04			        dta DL_MODE_40x24T5                         ; 14
+    19 BF9E 84			        dta DL_MODE_40x24T5 + DL_DLI                ; 15
+    20 BF9F 04			        dta DL_MODE_40x24T5                         ; 16
+    21 BFA0 04			        dta DL_MODE_40x24T5                         ; 17
+    22 BFA1 84			        dta DL_MODE_40x24T5 + DL_DLI                ; 18
+    23 BFA2 04			        dta DL_MODE_40x24T5                         ; 19
+    24 BFA3 04			        dta DL_MODE_40x24T5                         ; 20
+    25 BFA4 84			        dta DL_MODE_40x24T5 + DL_DLI                ; 21
+    26 BFA5 84			        dta DL_MODE_40x24T5 + DL_DLI                ; 22
+    27 BFA6 04			        dta DL_MODE_40x24T5                         ; 23
+    28 BFA7 04			        dta DL_MODE_40x24T5                         ; 24
+    29 BFA8 84			        dta DL_MODE_40x24T5 + DL_DLI                ; 25
+    30 BFA9 04			        dta DL_MODE_40x24T5                         ; 26
+    31 BFAA 84			        dta DL_MODE_40x24T5 + DL_DLI                ; 27
+    32 BFAB 04			        dta DL_MODE_40x24T5                         ; 28
+    33 BFAC 04			        dta DL_MODE_40x24T5                         ; 29
+    34 BFAD 04			        dta DL_MODE_40x24T5                         ; 30
+    35 BFAE 41 90 BF		        dta DL_JVB, a(dl_s)
+    23 02E2-02E3> 75 20			ini mcpy
+    25 					.print '$R RCASM   ',main.DL_TITLE,'..',main.DL_TITLE+len-1," 'dl_title.a65'"
+    25 				$R RCASM   $BF90..$BFB0 'dl_title.a65'
+Source: main.a65
+   128 20BF				RCASM 'dl_game.a65' DL_GAME 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RCASM [Source: resource.asm]
+     2 20BF				org RESORIGIN
+     4 = 0028			len = .sizeof(_DL_GAME)
+     6 				mcpy	ift main.DL_GAME+len >= $bc20
+     7 2075-20C5> A9 00 8D 2F + 	mva #0 sdmctl
+     8 207A 8D 00 D4			sta dmactl
+    11 207D 20 41 20			jsr sys.off
+    13 2080 A9 9E 85 88 A9 20 +  MWA #DATA EDX
+    13 2088 A9 D0 85 8C A9 BF +  MWA #MAIN.DL_GAME ECX
+    13 2090 A9 28 85 84 A9 00 +  MWA #LEN EAX
+    13 2098 20 00 20		 JSR RESOURCE.MEMCPY
+    15 209B 4C 65 20			jmp sys.on
+    16 209E			data
+     1 = 9000			FNT_TITLE     = $9000;
+     2 = 9800			SCR_TITLE     = $9800;
+     3 = 8C00			RMT_PLAYER    = $8c00;
+     5 = A400			FNT_STATUS    = $a400;
+     6 = A800			STATUS_ADDR   = $a800;
+     7 = A880			GOVER_ADDR    = $a880;
+     8 = A8F8			CRATER_ADDR   = $a8f8;
+    10 = AC00			FNT_GAME      = $ac00;
+    12 = B000			PMG_ADDR      = $B000;
+    13 = B000			SPR_ADDR      = $B000;
+    15 = B800			SCREEN_ADDR   = $b800;
+    17 = BF90			DL_TITLE      = $bf90;
+    18 = BFD0			DL_GAME       = $bfd0;
+    20 = C000			RMT_MODUL     = $c000;
+    24 = 0050			PTR1 = $50;
+    25 = 0052			PTR2 = $52;
+    26 = 0054			PTR3 = $54;
+     5 = 0000			DL_BLANK1 = 0; // 1 blank line
+     6 = 0010			DL_BLANK2 = %00010000; // 2 blank lines
+     7 = 0020			DL_BLANK3 = %00100000; // 3 blank lines
+     8 = 0030			DL_BLANK4 = %00110000; // 4 blank lines
+     9 = 0040			DL_BLANK5 = %01000000; // 5 blank lines
+    10 = 0050			DL_BLANK6 = %01010000; // 6 blank lines
+    11 = 0060			DL_BLANK7 = %01100000; // 7 blank lines
+    12 = 0070			DL_BLANK8 = %01110000; // 8 blank lines
+    14 = 0080			DL_DLI = %10000000; // Order to run DLI
+    15 = 0040			DL_LMS = %01000000; // Order to set new memory address
+    16 = 0020			DL_VSCROLL = %00100000; // Turn on vertical scroll on this line
+    17 = 0010			DL_HSCROLL = %00010000; // Turn on horizontal scroll on this line
+    19 = 0002			DL_MODE_40x24T2 = 2; // Antic Modes
+    20 = 0004			DL_MODE_40x24T5 = 4;
+    21 = 0005			DL_MODE_40x12T5 = 5;
+    22 = 0006			DL_MODE_20x24T5 = 6;
+    23 = 0007			DL_MODE_20x12T5 = 7;
+    24 = 0008			DL_MODE_40x24G4 = 8;
+    25 = 0009			DL_MODE_80x48G2 = 9;
+    26 = 000A			DL_MODE_80x48G4 = $A;
+    27 = 000B			DL_MODE_160x96G2 = $B;
+    28 = 000C			DL_MODE_160x192G2 = $C;
+    29 = 000D			DL_MODE_160x96G4 = $D;
+    30 = 000E			DL_MODE_160x192G4 = $E;
+    31 = 000F			DL_MODE_320x192G2 = $F;
+    33 = 0001			DL_JMP = %00000001; // Order to jump
+    34 = 0041			DL_JVB = %01000001; // Jump to begining
+     5 BFD0			dl_g
+     6 BFD0 70			        dta DL_BLANK8
+     7 BFD1 70			        dta DL_BLANK8
+     8 BFD2 F0			        dta DL_BLANK8 + DL_DLI ; SKY0
+     9 BFD3 C4 00 B8		        dta DL_MODE_40x24T5 + DL_LMS + DL_DLI, a(SCREEN_ADDR) ; SKY1
+    10 BFD6 C4 2C B8		        dta DL_MODE_40x24T5 + DL_LMS + DL_DLI, a(SCREEN_ADDR+44) ; SKY2
+    11 BFD9 C4 58 B8		        dta DL_MODE_40x24T5 + DL_LMS + DL_DLI, a(SCREEN_ADDR+88) ; SKY3
+    12 BFDC 84			        dta DL_MODE_40x24T5 + DL_DLI ; 128  SKY4
+    13 BFDD 84			        dta DL_MODE_40x24T5 + DL_DLI ; 168  GND0
+    15 BFDE 44 D0 B8		        dta DL_MODE_40x24T5 + DL_LMS, A(SCREEN_ADDR+ 208)
+    16 BFE1 04 04 04 04 04 04 +     :14 dta DL_MODE_40x24T5
+    17 BFEF 84			        dta DL_MODE_40x24T5 + DL_DLI ; STS0
+    19 BFF0 44 00 A8		        dta DL_MODE_40x24T5 + DL_LMS, a(STATUS_ADDR)
+    20 BFF3 04 04		    :2  dta DL_MODE_40x24T5
+    21 BFF5 41 D0 BF		        dta DL_JVB, a(dl_g)
+    23 02E2-02E3> 75 20			ini mcpy
+    25 					.print '$R RCASM   ',main.DL_GAME,'..',main.DL_GAME+len-1," 'dl_game.a65'"
+    25 				$R RCASM   $BFD0..$BFF7 'dl_game.a65'
+Source: main.a65
+   129 20C6				RMT 'assets/music.rmt' RMT_MODUL 0 0 0 0 0 0 0 0
+Macro: RESOURCE.RMT [Source: resource.asm]
+     2 = 05EE			len = .filesize('assets/music.rmt')
+     5 20C6				org RESORIGIN
+     7 2075-267D> 20 41 20	mcpy	jsr sys.off
+     9 2078 A9 96 85 88 A9 20 +  MWA #DATA EDX
+     9 2080 A9 00 85 8C A9 C0 +  MWA #MAIN.RMT_MODUL ECX
+     9 2088 A9 E8 85 84 A9 05 +  MWA #LEN-6 EAX
+     9 2090 20 00 20		 JSR RESOURCE.MEMCPY
+    11 2093 4C 65 20			jmp sys.on
+    13 2096			data	rmt_relocator 'assets/music.rmt',main.RMT_MODUL
+Macro: RESOURCE.RMT_RELOCATOR [Source: resource.asm]
+     2 2096				.get [$100] 'assets/music.rmt',0,6				// wczytujemy plik do bufora MADS'a
+     6 = C000			new_add = MAIN.RMT_MODUL						// nowy adres dla modulu RMT
+     8 = C000			old_add	= .wget[$102]					// stary adres modulu RMT
+    10 = 05E8			length	= .wget[$104] - old_add + 1			// dlugosc pliku RMT bez naglowka DOS'u
+    12 = 0000			ofset	= new_add-old_add
+    14 2096				.get [old_add-6] 'assets/music.rmt'
+    16  [BFFC] 00			.put[old_add-4] = .lo(new_add)			// poprawiamy nag��wek DOS'a
+    17  [BFFD] C0			.put[old_add-3] = .hi(new_add)			// tak aby zawieral informacje o nowym
+    19  [BFFE] E7			.put[old_add-2] = .lo(new_add + length - 1)	// adresie modulu RMT
+    20  [BFFF] C5			.put[old_add-1] = .hi(new_add + length - 1)
+    22 = 0034			type	= .get[old_add+3]
+    24 = C010			pinst	= .get[old_add+8] + .get[old_add+9]<<8
+    25 = C03C			pltrc	= .get[old_add+10] + .get[old_add+11]<<8
+    26 = C08D			phtrc	= .get[old_add+12] + .get[old_add+13]<<8
+    27 = C5AC			ptlst	= .get[old_add+14] + .get[old_add+15]<<8
+    29  [C008] 10			.put[old_add+8] = .lo(pinst+ofset)
+    30  [C009] C0			.put[old_add+9] = .hi(pinst+ofset)
+    32  [C00A] 3C			.put[old_add+10] = .lo(pltrc+ofset)
+    33  [C00B] C0			.put[old_add+11] = .hi(pltrc+ofset)
+    35  [C00C] 8D			.put[old_add+12] = .lo(phtrc+ofset)
+    36  [C00D] C0			.put[old_add+13] = .hi(phtrc+ofset)
+    38  [C00E] AC			.put[old_add+14] = .lo(ptlst+ofset)
+    39  [C00F] C5			.put[old_add+15] = .hi(ptlst+ofset)
+    43 = C0DE				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C010] DE			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C011] C0			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = C115				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C012] 15			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C013] C1			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = C149				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C014] 49			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C015] C1			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = C183				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C016] 83			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C017] C1			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = C1C0				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C018] C0			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C019] C1			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = C1F7				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C01A] F7			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C01B] C1			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = 0000				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C01C] 00			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C01D] 00			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = 0000				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C01E] 00			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C01F] 00			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = 0000				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C020] 00			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C021] 00			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = 0000				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C022] 00			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C023] 00			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = 0000				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C024] 00			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C025] 00			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = 0000				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C026] 00			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C027] 00			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = 0000				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C028] 00			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C029] 00			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = 0000				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C02A] 00			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C02B] 00			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = 0000				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C02C] 00			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C02D] 00			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = 0000				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C02E] 00			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C02F] 00			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = C234				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C030] 34			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C031] C2			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = C24A				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C032] 4A			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C033] C2			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = C279				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C034] 79			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C035] C2			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = C29A				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C036] 9A			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C037] C2			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = C2B6				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C038] B6			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C039] C2			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    43 = C2D2				?TMP = .GET[PINST+#*2] + .GET[PINST+#*2+1]<<8
+    43  [C03A] D2			.PUT[PINST+#*2] = .LO(?TMP+OFSET)
+    43  [C03B] C2			.PUT[PINST+#*2+1] = .HI(?TMP+OFSET)
+    52 = C318				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C03C] 18			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C08D] C3			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C332				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C03D] 32			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C08E] C3			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C38E				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C03E] 8E			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C08F] C3			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C3A6				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C03F] A6			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C090] C3			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C3D8				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C040] D8			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C091] C3			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C40D				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C041] 0D			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C092] C4			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C433				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C042] 33			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C093] C4			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C468				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C043] 68			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C094] C4			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C49D				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C044] 9D			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C095] C4			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C4C5				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C045] C5			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C096] C4			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = C4FA				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C04C] FA			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C09D] C4			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C52F				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C04D] 2F			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C09E] C5			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = C564				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C06C] 64			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C0BD] C5			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C569				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C06D] 69			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C0BE] C5			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = C56B				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C07C] 6B			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C0CD] C5			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C57F				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C07D] 7F			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C0CE] C5			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = C58D				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C07E] 8D			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C0CF] C5			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = C59D				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C080] 9D			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C0D1] C5			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = 0000				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52 = C5AA				?TMP = .GET[PLTRC+#] + .GET[PHTRC+#]<<8
+    52  [C08C] AA			.PUT[PLTRC+#] = .LO(?TMP+OFSET)
+    52  [C0DD] C5			.PUT[PHTRC+#] = .HI(?TMP+OFSET)
+    66 = 0004				skip=4
+    70 = C5AC				?TMP = .GET[PTLST+#*SKIP+2] + .GET[PTLST+#*SKIP+3]<<8
+    70  [C5DA] AC			.PUT[PTLST+#*SKIP+2] = .LO(?TMP+OFSET)
+    70  [C5DB] C5			.PUT[PTLST+#*SKIP+3] = .HI(?TMP+OFSET)
+    70 = C5E0				?TMP = .GET[PTLST+#*SKIP+2] + .GET[PTLST+#*SKIP+3]<<8
+    70  [C5E6] E0			.PUT[PTLST+#*SKIP+2] = .LO(?TMP+OFSET)
+    70  [C5E7] C5			.PUT[PTLST+#*SKIP+3] = .HI(?TMP+OFSET)
+    17 02E2-02E3> 75 20			ini mcpy
+    34 				 	.print '$R RMT     ',main.RMT_MODUL,'..',main.RMT_MODUL+len-6," 'assets/music.rmt'"
+    34 				$R RMT     $C000..$C5E8 'assets/music.rmt'
+Source: main.a65
+   130 				.endl
+   131
+   132 				; ------------------------------------------------------------
+   133
+   134 267E				org CODEORIGIN
+   135
+   136 2000				STATICDATA
+Macro: STATICDATA [Source: main.a65]
+     1 2000-30B8> 00 B0 10 B0 + .by  $00 $B0 $10 $B0 $20 $B0 $30 $B0  $40 $B0 $50 $B0 $60 $B0 $70 $B0  $80 $B0 $90 $B0 $A0 $B0 $B0 $B0
+     2 2018 C0 B0 D0 B0 E0 B0 + .by  $C0 $B0 $D0 $B0 $E0 $B0 $F0 $B0  $00 $B1 $10 $B1 $20 $B1 $30 $B1  $40 $B1 $50 $B1 $FF $FF $FF $FF
+     3 2030 FF FF FF 00 FF FF + .by  $FF $FF $FF $00 $FF $FF $FF $02  $FF $06 $04 $FF $00 $00 $00 $00  $00 $00 $00 $02 $00 $00 $00 $FE
+     4 2048 00 00 00 00 00 00 + .by  $00 $00 $00 $00 $00 $00 $00 $00  $00 $00 $00 $00 $00 $00 $00 $00  $00 $04 $FC $00
+Source: main.a65
+   137
+   138 				; ------------------------------------------------------------
+   139
+   140 205C			RTLIB
+   141 205C				icl 'rtl6502_a8.asm'
+Source: rtl6502_a8.asm
+    64 					opt l+
+   142
+   143 				.print 'ZPAGE: ',zpage,'..',zpend-1
+   143 				ZPAGE: $0080..$00D3
+   144
+   145 				.print 'RTBUF: ',@buf,'..',@buf+255
+   145 				RTBUF: $0400..$04FF
+   146
+   147 				.print 'RTLIB: ',RTLIB,'..',*-1
+   147 				RTLIB: $205C..$21BD
+   148
+   149 				; ------------------------------------------------------------
+   150
+   151 21BE			START
+   152 21BE BA				tsx
+   153 21BF 8E 8F 30			stx MAIN.@halt+1
+   154
+   155 					.ifdef MAIN.@DEFINES.ROMOFF
+   156 21C2				icl 'atari\romoff.asm'
+Source: romoff.asm
+     1
+     2 				// http://atariki.krap.pl/index.php/Programowanie:_U%C5%BCycie_OS-a_przy_wy%C5%82%C4%85czonym_ROM-ie
+     3
+     4 21C2			.local	rominit
+     5
+     6 21C2 78			        sei
+     7 21C3 A9 00		        lda #%00000000
+     8 21C5 8D 0E D4		        sta NMIEN       ;$D40E
+     9 21C8 A9 FE		        lda #%11111110
+    10 21CA 8D 01 D3		        sta PORTB       ;$D301
+    11
+    12 				; Wprowadzona zmiana pozwala wyłączyć z poziomu kodu Pascala, kopiowanie czcionek z pamięci ROM do RAM przy wyłączonym ROMie
+    13 				; Proces ten (niefortunnie) powoduje nadpisanie danych w obszarze $E000..$E3FF, gdy w zasobach umieścimi dane, które
+    14 				; w ten obszar są wczytywane. Za pomocą definicji '{$DEFINE NOROMFONT}` można wyłączyć przerzut danych czcionek z ROM do RAMu,
+    15 				; co pozwala zachować, wczytywane zasoby.
+    16
+    17 				.ifndef MAIN.@DEFINES.NOROMFONT
+    18 					ldx #3
+    19 					ldy #0
+    20 				mv	inc portb
+    21 				afnt0	lda $e000,y
+    22 					dec portb
+    23 				afnt1	sta $e000,y
+    24 					iny
+    25 					bne mv
+    26 					inc afnt0+2
+    27 					inc afnt1+2
+    28 					dex
+    29 					bpl mv
+    30 				.endif
+    31
+    32 21CD A2 EA		        ldx #<nmiint
+    33 21CF A0 21		        ldy #>nmiint
+    34 21D1 8E FA FF		        stx NMIVEC      ;$FFFA
+    35 21D4 8C FB FF		        sty NMIVEC+1
+    36
+    37 21D7 A2 F4		        ldx #<irqint
+    38 21D9 A0 21		        ldy #>irqint
+    39 21DB 8E FE FF		        stx IRQVEC      ;$FFFE
+    40 21DE 8C FF FF		        sty IRQVEC+1
+    41
+    42 21E1 A9 40		        lda #%01000000
+    43 21E3 8D 0E D4		        sta NMIEN       ;$D40E
+    44 21E6 58			        cli
+    45
+    46 21E7 4C 15 22			jmp skp
+    47
+    48
+    49 21EA 2C 0F D4		nmiint  bit NMIST        ;$D40F
+    50 21ED 10 03		        spl
+    51 21EF 6C 00 02		        jmp (VDSLST)     ;$0200
+    52
+    53 21F2 38			        sec
+    54 21F3 24			        .byte $24        ;BIT $18
+    55
+    56 21F4 18			irqint  clc
+    57
+    58 				        ;wlaczenie OS ROM
+    59
+    60 21F5 EE 01 D3		        inc PORTB       ;$D301
+    61
+    62 21F8 48			        pha
+    63 21F9 8A			        txa
+    64 21FA 48			        pha
+    65 21FB BA			        tsx
+    66
+    67 				        ;odlozenie na stos danych dla powrotu z przerwania (RTI)
+    68
+    69 21FC A9 22		        lda #>iret      ;adres procedury iret
+    70 21FE 48			        pha
+    71 21FF A9 0E		        lda #<iret
+    72 2201 48			        pha
+    73 2202 BD 03 01		        lda $103,x      ;skopiowanie wartosci rejestru stanu procesora
+    74 2205 48			        pha
+    75
+    76 				        ;skok przez odpowiedni wektor przerwania
+    77
+    78 2206 90 03		        scc
+    79 2208 6C FA FF		        jmp (NMIVEC)    ;$FFFA
+    80 220B 6C FE FF		        jmp (IRQVEC)    ;$FFFE
+    81
+    82 220E 68			iret	pla
+    83 220F AA				tax
+    84 2210 68				pla
+    85
+    86 				        ;wylaczenie OS ROM
+    87
+    88 2211 CE 01 D3		        dec PORTB       ;$D301
+    89 2214 40			        rti
+    90
+    91 2215			skp
+    92
+    93 				.endl
+   157 					.fi
+   158
+   159 = 0059			VLEN	= VARDATASIZE-VARINITSIZE
+   160 = 3120			VADR	= DATAORIGIN+VARINITSIZE
+   161
+   162 					ift (VADR > $BFFF) && .not(.def MAIN.@DEFINES.ROMOFF)
+   163 					ert 'Invalid memory address range ',VADR
+   164 					eif
+   165
+   166 					ift (VLEN > 0) && (VLEN <= 256)
+   167 2215 A2 A7			ldx #256-VLEN
+   168 2217 A9 00			lda #$00
+   169 2219 9D 79 30 E8 D0 FA		sta:rne VADR+VLEN-256,x+
+   170 					eli VLEN>256
+   171 					m@init
+   172 					eif
+   173
+   174 				.ifdef psptr
+   175 					mwa #PROGRAMSTACK psptr
+   176 				.fi
+   177
+   178 221F A2 00			ldx #$00					; X = 0
+   179 2221 86 80			stx bp						; BP = 0
+   180
+   181 2223 8E 08 D2			stx audctl					; reset POKEY
+   182 2226 8E 18 D2			stx audctl+$10
+   183 2229 A9 03			lda #3
+   184 222B 8D 0F D2			sta skctl
+   185 222E 8D 1F D2			sta skctl+$10
+   186
+   187 2231 CA				dex						; X = 255
+   188
+   189 2232				UNITINITIALIZATION
+Macro: UNITINITIALIZATION [Source: main.a65]
+     3 2232 20 9E 22			jsr MAIN.SYSTEM.@UnitInit
+    15 2235 20 8A 23			jsr MAIN.RMT.@UnitInit
+   190
+   191 2238			.local	MAIN						; PROCEDURE
+   192
+   193 2238 4C 6B 30			jmp l_0004
+   194
+   195 				; ------------------------------------------------------------
+   196
+   197 223B			.local	SYSTEM						; UNIT
+   198
+   199 223B			.local	PEEK						; FUNCTION | ASSEMBLER | REGISTER
+   200
+   201 				; ------------------------------------------------------------
+   202
+   203 				; Generate Assignment for WORD / SMALLINT / SHORTREAL / POINTER
+   204 				; as Pointer
+   205 223B B5 94			lda :STACKORIGIN,x
+   206 223D 85 88			sta A
+   207 223F B5 A4			lda :STACKORIGIN+STACKWIDTH,x
+   208 2241 85 89			sta A+1
+   209 2243 CA				dex
+   210 2244			@main
+   211
+   212 				; -------------------  ASM Block 00000002  -------------------
+   213
+   214 2244 A0 00			ldy #0
+   215 2246 B1 88 85 90			mva (:edx),y Result
+   216
+   217 224A			@exit
+   218
+   219 				; ------------------------------------------------------------
+   220
+   221 				; Push BYTE / CHAR / SHORTINT / BOOLEAN
+   222 				; as Pointer
+   223
+   224 224A E8				inx
+   225 224B A5 90 95 94			mva RESULT :STACKORIGIN,x
+   226
+   227 					.ifdef @new
+   228 					lda <@VarData
+   229 					sta :ztmp
+   230 					lda >@VarData
+   231 					ldy #@VarDataSize-1
+   232 					jmp @FreeMem
+   233 					eif
+   234
+   235 				; ------------------------------------------------------------
+   236
+   237 = 0088			A	= :EDX
+   238 = 0090			RESULT	= :STACKORIGIN-4
+   239
+   240 224F 60				rts						; ret
+   241 				.endl
+   242
+   243 2250			.local	POKE						; PROCEDURE | ASSEMBLER | REGISTER
+   244
+   245 				; ------------------------------------------------------------
+   246
+   247 				; Generate Assignment for WORD / SMALLINT / SHORTREAL / POINTER
+   248 				; as Pointer
+   249 2250 B5 94			lda :STACKORIGIN,x
+   250 2252 85 88			sta A
+   251 2254 B5 A4			lda :STACKORIGIN+STACKWIDTH,x
+   252 2256 85 89			sta A+1
+   253 2258 CA				dex
+   254 2259 30 05			jmi @main
+   255
+   256 				; ------------------------------------------------------------
+   257
+   258 				; Generate Assignment for BYTE / CHAR / SHORTINT / BOOLEAN
+   259 				; as Pointer
+   260 225B B5 94			lda :STACKORIGIN,x
+   261 225D 85 8C			sta VALUE
+   262 225F CA				dex
+   263 2260			@main
+   264
+   265 				; -------------------  ASM Block 00000025  -------------------
+   266
+   267 2260 A0 00			ldy #0
+   268 2262 A5 8C 91 88			mva value (:edx),y
+   269
+   270 				; ------------------------------------------------------------
+   271
+   272 = 0088			A	= :EDX
+   273 = 008C			VALUE	= :ECX
+   274
+   275 2266			@exit
+   276 					.ifdef @new
+   277 					lda <@VarData
+   278 					sta :ztmp
+   279 					lda >@VarData
+   280 					ldy #@VarDataSize-1
+   281 					jmp @FreeMem
+   282 					els
+   283 2266 60				rts						; ret
+   284 					eif
+   285 				.endl
+   286
+   287 2267			.local	DPOKE						; PROCEDURE | ASSEMBLER | REGISTER
+   288
+   289 				; ------------------------------------------------------------
+   290
+   291 				; Generate Assignment for WORD / SMALLINT / SHORTREAL / POINTER
+   292 				; as Pointer
+   293 2267 B5 94			lda :STACKORIGIN,x
+   294 2269 85 88			sta A
+   295 226B B5 A4			lda :STACKORIGIN+STACKWIDTH,x
+   296 226D 85 89			sta A+1
+   297 226F CA				dex
+   298 2270 30 09			jmi @main
+   299
+   300 				; ------------------------------------------------------------
+   301
+   302 				; Generate Assignment for WORD / SMALLINT / SHORTREAL / POINTER
+   303 				; as Pointer
+   304 2272 B5 94			lda :STACKORIGIN,x
+   305 2274 85 8C			sta VALUE
+   306 2276 B5 A4			lda :STACKORIGIN+STACKWIDTH,x
+   307 2278 85 8D			sta VALUE+1
+   308 227A CA				dex
+   309 227B			@main
+   310
+   311 				; -------------------  ASM Block 00000026  -------------------
+   312
+   313 227B A0 00			ldy #0
+   314 227D A5 8C 91 88			mva value (:edx),y
+   315 2281 C8				iny
+   316 2282 A5 8D 91 88			mva value+1 (:edx),y
+   317
+   318 				; ------------------------------------------------------------
+   319
+   320 = 0088			A	= :EDX
+   321 = 008C			VALUE	= :ECX
+   322
+   323 2286			@exit
+   324 					.ifdef @new
+   325 					lda <@VarData
+   326 					sta :ztmp
+   327 					lda >@VarData
+   328 					ldy #@VarDataSize-1
+   329 					jmp @FreeMem
+   330 					els
+   331 2286 60				rts						; ret
+   332 					eif
+   333 				.endl
+   334
+   335 2287			.local	FILLCHAR					; PROCEDURE | ASSEMBLER | OVERLOAD | REGISTER | INLINE
+   336 2287			.local	@03018000001810000188000
+   337
+   338 					.MACRO m@INLINE
+   339 				
+   340 				; -------------------  ASM Block 00000028  -------------------
+   341 				
+   342 					jsr @fill
+   343 				
+   344 					.ENDM
+   345
+   346 				; ------------------------------------------------------------
+   347
+   348 = 0088			A	= :EDX
+   349 = 008C			COUNT	= :ECX
+   350 = 0084			VALUE	= :EAX
+   351
+   352 2287			@exit
+   353 				.endl
+   354 				.endl							; overload
+   355
+   356 2287			.local	RANDOM						; FUNCTION | ASSEMBLER | OVERLOAD
+   357 2287			.local	@010180000
+   358 2287 8D 23 31			sta RANGE
+   359
+   360 				; -------------------  ASM Block 00000049  -------------------
+   361
+   362
+   363 				;BYTE FUNC Rand(BYTE range)
+   364 				; returns random number between 0 and
+   365 				; range-1.  If range=0, then a random
+   366 				; number between 0 and 255 is returned
+   367
+   368 228A AC 0A D2		  ldy $d20a   ; RANDOM
+   369
+   370 228D AD 23 31		  lda range
+   371 2290 F0 08		  beq stop
+   372
+   373 2292 85 8C		  sta :ecx
+   374 2294 84 84		  sty :eax
+   375
+   376 2296 20 95 20		  jsr imulCL
+   377 2299 A8			  tay
+   378
+   379 229A 8C 24 31		stop  sty Result
+   380
+   381
+   382 229D			@exit
+   383
+   384 				; ------------------------------------------------------------
+   385
+   386 = 3123			RANGE	= DATAORIGIN+$000B
+   387 = 3124			RESULT	= DATAORIGIN+$000C
+   388
+   389 = 3123			@VarData	= RANGE
+   390 = 0001			@VarDataSize	= 1
+   391
+   392 229D 60				rts						; ret
+   393 				.endl
+   394 				.endl							; overload
+   395
+   396 				; ------------------------------------------------------------
+   397 				; ------------------------------------------------------------
+   398 229E			@UnitInit
+   399
+   400 				; -------------------  ASM Block 00000060  -------------------
+   401
+   402 					.ifdef @CmdLine
+   403
+   404 					ldx #$0F
+   405 					mva:rpl $340,x IOCB@COPY,x-
+   406 					rts
+   407
+   408 				IOCB@COPY	:16 brk
+   409 					eif
+   410
+   411
+   412 229E 60				rts
+   413
+   414 				; ------------------------------------------------------------
+   415
+   416 = 0648			M_PI_2	= $0648
+   417 = 0192			D_PI_2	= $0192
+   418 = 0004			D_PI_180	= $04
+   419 = 0101			__PORTB_BANKS	= $0101
+   420 = 0000			MGTIA	= $00
+   421 = 0080			MVBXE	= $80
+   422 = 0000			VBXE_XDLADR	= $00
+   423 = 00E0			VBXE_BCBTMP	= $E0
+   424 = 0100			VBXE_BCBADR	= $0100
+   425 = 1000			VBXE_MAPADR	= $1000
+   426 = 1000			VBXE_CHBASE	= $1000
+   427 = 5000			VBXE_OVRADR	= $5000
+   428 = B000			VBXE_WINDOW	= $B000
+   429 = 0000			IDLI	= $00
+   430 = 0001			IVBL	= $01
+   431 = 0001			IVBLD	= $01
+   432 = 0002			IVBLI	= $02
+   433 = 0003			ITIM1	= $03
+   434 = 0004			ITIM2	= $04
+   435 = 0005			ITIM4	= $05
+   436 = 00FE			CH_DELCHR	= $FE
+   437 = 009B			CH_ENTER	= $9B
+   438 = 001B			CH_ESC	= $1B
+   439 = 001C			CH_CURS_UP	= $1C
+   440 = 001D			CH_CURS_DOWN	= $1D
+   441 = 001E			CH_CURS_LEFT	= $1E
+   442 = 001F			CH_CURS_RIGHT	= $1F
+   443 = 007F			CH_TAB	= $7F
+   444 = 009B			CH_EOL	= $9B
+   445 = 007D			CH_CLR	= $7D
+   446 = 00FD			CH_BELL	= $FD
+   447 = 007E			CH_DEL	= $7E
+   448 = 009C			CH_DELLINE	= $9C
+   449 = 009D			CH_INSLINE	= $9D
+   450 = 0000			PAL_PMCOLOR0	= $00
+   451 = 0001			PAL_PMCOLOR1	= $01
+   452 = 0002			PAL_PMCOLOR2	= $02
+   453 = 0003			PAL_PMCOLOR3	= $03
+   454 = 0004			PAL_COLOR0	= $04
+   455 = 0005			PAL_COLOR1	= $05
+   456 = 0006			PAL_COLOR2	= $06
+   457 = 0007			PAL_COLOR3	= $07
+   458 = 0008			PAL_COLBAK	= $08
+   459 = 0000			COLOR_BLACK	= $00
+   460 = 000E			COLOR_WHITE	= $0E
+   461 = 0032			COLOR_RED	= $32
+   462 = 0096			COLOR_CYAN	= $96
+   463 = 0068			COLOR_VIOLET	= $68
+   464 = 00C4			COLOR_GREEN	= $C4
+   465 = 0074			COLOR_BLUE	= $74
+   466 = 00EE			COLOR_YELLOW	= $EE
+   467 = 0028			COLOR_ORANGE	= $28
+   468 = 00E4			COLOR_BROWN	= $E4
+   469 = 003C			COLOR_LIGHTRED	= $3C
+   470 = 0004			COLOR_GRAY1	= $04
+   471 = 0006			COLOR_GRAY2	= $06
+   472 = 000A			COLOR_GRAY3	= $0A
+   473 = 00CC			COLOR_LIGHTGREEN	= $CC
+   474 = 007C			COLOR_LIGHTBLUE	= $7C
+   475 = 0004			FMOPENREAD	= $04
+   476 = 0008			FMOPENWRITE	= $08
+   477 = 0009			FMOPENAPPEND	= $09
+   478 = 000C			FMOPENREADWRITE	= $0C
+   479 = 3118			DATESEPARATOR	= DATAORIGIN+$0000
+   480 = D20A			RND	= $D20A
+   481 = 02C0			adr.PALETTE	= $02C0
+   482 229F			.var PALETTE	= adr.PALETTE .word
+   483 = D012			adr.HPALETTE	= $D012
+   484 229F			.var HPALETTE	= adr.HPALETTE .word
+   485 = 3119			FILEMODE	= DATAORIGIN+$0001
+   486 = 311A			GRAPHMODE	= DATAORIGIN+$0002
+   487 = 311B			IORESULT	= DATAORIGIN+$0003
+   488 = 311C			EOLN	= DATAORIGIN+$0004
+   489 = 311D			SCREENWIDTH	= DATAORIGIN+$0005
+   490 = 311F			SCREENHEIGHT	= DATAORIGIN+$0007
+   491 = 0000			adr.MEM	= $00
+   492 229F			.var MEM	= adr.MEM .word
+   493 = 3121			RNDSEED	= DATAORIGIN+$0009
+   494
+   495 = 229F C0 02		PALETTE
+   495 = 22A1 12 D0		HPALETTE
+   495 = 22A3 00 00		MEM
+   495 				.endl							; UNIT SYSTEM
+   496
+   497 				; ------------------------------------------------------------
+   498
+   499 22A5			.local	ATARI						; UNIT
+   500
+   501 				; ------------------------------------------------------------
+   502
+   503 = 0000			DL_BLANK1	= $00
+   504 = 0010			DL_BLANK2	= $10
+   505 = 0020			DL_BLANK3	= $20
+   506 = 0030			DL_BLANK4	= $30
+   507 = 0040			DL_BLANK5	= $40
+   508 = 0050			DL_BLANK6	= $50
+   509 = 0060			DL_BLANK7	= $60
+   510 = 0070			DL_BLANK8	= $70
+   511 = 0080			DL_DLI	= $80
+   512 = 0040			DL_LMS	= $40
+   513 = 0020			DL_VSCROLL	= $20
+   514 = 0010			DL_HSCROLL	= $10
+   515 = 0001			DL_JMP	= $01
+   516 = 0041			DL_JVB	= $41
+   517 = 000E			DL_MODE_GR15	= $0E
+   518 = 000F			DL_MODE_GR8	= $0F
+   519 = 0010			IRQENS	= $10
+   520 = 0012			RTCLOK	= $12
+   521 = 0012			RTCLOK1	= $12
+   522 = 0013			RTCLOK2	= $13
+   523 = 0014			RTCLOK3	= $14
+   524 = 004D			ATRACT	= $4D
+   525 = 0052			LMARGIN	= $52
+   526 = 0053			RMARGIN	= $53
+   527 = 0054			ROWCRS	= $54
+   528 = 0055			COLCRS	= $55
+   529 = 0057			DINDEX	= $57
+   530 = 0058			SAVMSC	= $58
+   531 = 0062			PALNTS	= $62
+   532 = 006A			RAMTOP	= $6A
+   533 = 0200			VDSLST	= $0200
+   534 = 0230			SDLSTL	= $0230
+   535 = 0290			TXTROW	= $0290
+   536 = 0291			TXTCOL	= $0291
+   537 = 0293			TINDEX	= $0293
+   538 = 0294			TXTMSC	= $0294
+   539 = 022F			SDMCTL	= $022F
+   540 = 026F			GPRIOR	= $026F
+   541 = 02F0			CRSINH	= $02F0
+   542 = 02F3			CHACT	= $02F3
+   543 = 02F4			CHBAS	= $02F4
+   544 = 02FC			CH	= $02FC
+   545 = 02FD			FILDAT	= $02FD
+   546 = 02C0			PCOLR0	= $02C0
+   547 = 02C1			PCOLR1	= $02C1
+   548 = 02C2			PCOLR2	= $02C2
+   549 = 02C3			PCOLR3	= $02C3
+   550 = 02C4			COLOR0	= $02C4
+   551 = 02C5			COLOR1	= $02C5
+   552 = 02C6			COLOR2	= $02C6
+   553 = 02C7			COLOR3	= $02C7
+   554 = 02C8			COLOR4	= $02C8
+   555 = 02C8			COLBAKS	= $02C8
+   556 = D000			HPOSP0	= $D000
+   557 = D001			HPOSP1	= $D001
+   558 = D002			HPOSP2	= $D002
+   559 = D003			HPOSP3	= $D003
+   560 = D004			HPOSM0	= $D004
+   561 = D005			HPOSM1	= $D005
+   562 = D006			HPOSM2	= $D006
+   563 = D007			HPOSM3	= $D007
+   564 = D008			SIZEP0	= $D008
+   565 = D009			SIZEP1	= $D009
+   566 = D00A			SIZEP2	= $D00A
+   567 = D00B			SIZEP3	= $D00B
+   568 = D00C			SIZEM	= $D00C
+   569 = D00D			GRAFP0	= $D00D
+   570 = D00E			GRAFP1	= $D00E
+   571 = D00F			GRAFP2	= $D00F
+   572 = D010			GRAFP3	= $D010
+   573 = D011			GRAFM	= $D011
+   574 = D004			P0PF	= $D004
+   575 = D014			PAL	= $D014
+   576 = D013			TRIG3	= $D013
+   577 = D012			COLPM0	= $D012
+   578 = D013			COLPM1	= $D013
+   579 = D014			COLPM2	= $D014
+   580 = D015			COLPM3	= $D015
+   581 = D016			COLPF0	= $D016
+   582 = D017			COLPF1	= $D017
+   583 = D018			COLPF2	= $D018
+   584 = D019			COLPF3	= $D019
+   585 = D01A			COLBAK	= $D01A
+   586 = D01A			COLBK	= $D01A
+   587 = D01B			PRIOR	= $D01B
+   588 = D01D			GRACTL	= $D01D
+   589 = D01D			PMCNTL	= $D01D
+   590 = D01E			HITCLR	= $D01E
+   591 = D01F			CONSOL	= $D01F
+   592 = D200			AUDF1	= $D200
+   593 = D201			AUDC1	= $D201
+   594 = D202			AUDF2	= $D202
+   595 = D203			AUDC2	= $D203
+   596 = D204			AUDF3	= $D204
+   597 = D205			AUDC3	= $D205
+   598 = D206			AUDF4	= $D206
+   599 = D207			AUDC4	= $D207
+   600 = D208			AUDCTL	= $D208
+   601 = D209			KBCODE	= $D209
+   602 = D20E			IRQEN	= $D20E
+   603 = D20F			SKSTAT	= $D20F
+   604 = D300			PORTA	= $D300
+   605 = D301			PORTB	= $D301
+   606 = D302			PACTL	= $D302
+   607 = D400			DMACTL	= $D400
+   608 = D401			CHACTL	= $D401
+   609 = D402			DLISTL	= $D402
+   610 = D404			HSCROL	= $D404
+   611 = D405			VSCROL	= $D405
+   612 = D407			PMBASE	= $D407
+   613 = D409			CHBASE	= $D409
+   614 = D40A			WSYNC	= $D40A
+   615 = D40B			VCOUNT	= $D40B
+   616 = D40C			PENH	= $D40C
+   617 = D40D			PENV	= $D40D
+   618 = D40E			NMIEN	= $D40E
+   619 = FFFA			NMIVEC	= $FFFA
+   620 = FFFC			RESETVEC	= $FFFC
+   621 = FFFE			IRQVEC	= $FFFE
+   622
+   623 				.endl							; UNIT ATARI
+   624
+   625 				; ------------------------------------------------------------
+   626
+   627 22A5			.local	MISC						; UNIT
+   628
+   629 22A5			.local	DETECTANTIC					; FUNCTION | ASSEMBLER
+   630
+   631 				; -------------------  ASM Block 00000061  -------------------
+   632
+   633
+   634 				// ANTIC PAL Test for Atari 8-bits
+   635 				// (C) 2019 Guillermo Fuenzalida
+   636
+   637 22A5			antic_loop1
+   638 22A5 AD 0B D4			lda vcount
+   639 22A8 C9 64			cmp #100
+   640 22AA 90 F9			bcc antic_loop1		// wait till scanline 200
+   641 22AC 8D C3 22			sta scanline
+   642 22AF			antic_loop2
+   643 22AF AD 0B D4			lda vcount
+   644 22B2 C9 0A			cmp #10
+   645 22B4 30 0A			bmi antic_loop2_fin
+   646 22B6 CD C3 22			cmp scanline
+   647 22B9 30 F4			bmi antic_loop2
+   648 22BB 8D C3 22			sta scanline
+   649 22BE 10 EF			bpl antic_loop2
+   650
+   651 22C0			antic_loop2_fin
+   652 22C0 A0 00			ldy #$00
+   653 22C2 A9 00			lda #0
+   654 = 22C3			scanline equ *-1
+   655 22C4 C9 87			cmp #135
+   656 22C6 30 01			bmi ntsc
+   657 22C8 C8				iny
+   658 22C9			ntsc
+   659 22C9 8C 25 31			sty Result
+   660
+   661
+   662 22CC			@exit
+   663
+   664 				; ------------------------------------------------------------
+   665
+   666 = 3125			RESULT	= DATAORIGIN+$000D
+   667
+   668 22CC 60				rts						; ret
+   669 				.endl
+   670
+   671 				; ------------------------------------------------------------
+   672
+   673 = 0101			adr.BANKS	= $0101
+   674 22CD			.var BANKS	= adr.BANKS .word
+   675 = FFF7			DETECTOS	= $FFF7
+   676
+   677 = 22CD 01 01		BANKS
+   677 				.endl							; UNIT MISC
+   678
+   679 				; ------------------------------------------------------------
+   680
+   681 22CF			.local	RMT						; UNIT
+   682
+   683 22CF			.local	TRMT.INIT					; PROCEDURE | ASSEMBLER
+   684 22CF 8D 27 31			sta TRMT
+   685 22D2 8C 28 31			sty TRMT+1
+   686 22D5 8D 2A 31			sta PLAYER
+   687 22D8 8C 2B 31			sty PLAYER+1
+   688 22DB 18 69 02			add #2
+   689 22DE 90 01			scc
+   690 22E0 C8				iny
+   691 22E1 8D 2C 31			sta MODUL
+   692 22E4 8C 2D 31			sty MODUL+1
+   693
+   694 				; -------------------  ASM Block 00000071  -------------------
+   695
+   696 22E7 8A 48			txa:pha
+   697
+   698 22E9 AD 27 31 85 82 AD + 	mwa TRMT :bp2
+   699
+   700 22F3 A0 01			ldy #1
+   701 22F5 B1 82			lda (:bp2),y
+   702 22F7 8D 07 23			sta adr+2
+   703
+   704 22FA C8				iny
+   705 22FB B1 82			lda (:bp2),y
+   706 22FD AA				tax		; low byte of RMT module to X reg
+   707 22FE C8				iny
+   708 22FF B1 82			lda (:bp2),y
+   709 2301 A8				tay		; hi byte of RMT module to Y reg
+   710
+   711 2302 AD 29 31			lda a		; starting song line 0-255 to A reg
+   712 2305 20 03 FF		adr	jsr $ff03	; jsr player+3
+   713
+   714 2308 68 AA			pla:tax
+   715
+   716 				; ------------------------------------------------------------
+   717
+   718 = 3127			TRMT	= DATAORIGIN+$000F
+   719 = 3129			A	= DATAORIGIN+$0011
+   720 = 312A			PLAYER	= DATAORIGIN+$0012
+   721 = 312C			MODUL	= DATAORIGIN+$0014
+   722
+   723 = 3127			@VarData	= TRMT
+   724 = 0007			@VarDataSize	= 7
+   725
+   726 230A			@exit
+   727 					.ifdef @new
+   728 					lda <@VarData
+   729 					sta :ztmp
+   730 					lda >@VarData
+   731 					ldy #@VarDataSize-1
+   732 					jmp @FreeMem
+   733 					els
+   734 230A 60				rts						; ret
+   735 					eif
+   736 				.endl
+   737
+   738 230B			.local	TRMT.SFX					; PROCEDURE | ASSEMBLER
+   739 230B 8D 2E 31			sta TRMT
+   740 230E 8C 2F 31			sty TRMT+1
+   741 2311 8D 33 31			sta PLAYER
+   742 2314 8C 34 31			sty PLAYER+1
+   743 2317 18 69 02			add #2
+   744 231A 90 01			scc
+   745 231C C8				iny
+   746 231D 8D 35 31			sta MODUL
+   747 2320 8C 36 31			sty MODUL+1
+   748
+   749 				; -------------------  ASM Block 00000072  -------------------
+   750
+   751 2323 8A 48			txa:pha
+   752
+   753 2325 AD 2E 31 8D 34 23 + 	mwa TRMT adr+1
+   754
+   755 2331 A0 01			ldy #1
+   756 2333 B9 FF FF		adr	lda $ffff,y
+   757 2336 8D 46 23			sta ptr+2
+   758
+   759 2339 AD 30 31			lda effect
+   760 233C 0A				asl @
+   761 233D A8				tay
+   762
+   763 233E AE 31 31			ldx channel
+   764 2341 AD 32 31			lda note
+   765
+   766 2344 20 0F FF		ptr	jsr $ff0f	; jsr player+15
+   767
+   768 2347 68 AA			pla:tax
+   769
+   770 				; ------------------------------------------------------------
+   771
+   772 = 312E			TRMT	= DATAORIGIN+$0016
+   773 = 3130			EFFECT	= DATAORIGIN+$0018
+   774 = 3131			CHANNEL	= DATAORIGIN+$0019
+   775 = 3132			NOTE	= DATAORIGIN+$001A
+   776 = 3133			PLAYER	= DATAORIGIN+$001B
+   777 = 3135			MODUL	= DATAORIGIN+$001D
+   778
+   779 = 312E			@VarData	= TRMT
+   780 = 0009			@VarDataSize	= 9
+   781
+   782 2349			@exit
+   783 					.ifdef @new
+   784 					lda <@VarData
+   785 					sta :ztmp
+   786 					lda >@VarData
+   787 					ldy #@VarDataSize-1
+   788 					jmp @FreeMem
+   789 					els
+   790 2349 60				rts						; ret
+   791 					eif
+   792 				.endl
+   793
+   794 234A			.local	TRMT.PLAY					; PROCEDURE | ASSEMBLER
+   795 234A 8D 37 31			sta TRMT
+   796 234D 8C 38 31			sty TRMT+1
+   797 2350 8D 39 31			sta PLAYER
+   798 2353 8C 3A 31			sty PLAYER+1
+   799 2356 18 69 02			add #2
+   800 2359 90 01			scc
+   801 235B C8				iny
+   802 235C 8D 3B 31			sta MODUL
+   803 235F 8C 3C 31			sty MODUL+1
+   804
+   805 				; -------------------  ASM Block 00000073  -------------------
+   806
+   807 2362 8A 48			txa:pha
+   808
+   809 2364 0E 26 31			asl ntsc		; =0 PAL, =4 NTSC
+   810 2367 90 07			bcc skp
+   811
+   812 2369 A9 04			lda #%00000100
+   813 236B 8D 26 31			sta ntsc
+   814
+   815 236E D0 17			bne quit
+   816 2370			skp
+   817 2370 AD 37 31 8D 7F 23 + 	mwa TRMT adr+1
+   818
+   819 237C A0 01			ldy #1
+   820 237E B9 FF FF		adr	lda $ffff,y
+   821 2381 8D 86 23			sta ptr+2
+   822
+   823 2384 20 00 FF		ptr	jsr $ff00		; jmp (TRMT)	6502 buggy indirect jump
+   824
+   825 2387 68 AA		quit	pla:tax
+   826
+   827 				; ------------------------------------------------------------
+   828
+   829 = 3137			TRMT	= DATAORIGIN+$001F
+   830 = 3139			PLAYER	= DATAORIGIN+$0021
+   831 = 313B			MODUL	= DATAORIGIN+$0023
+   832
+   833 = 3137			@VarData	= TRMT
+   834 = 0006			@VarDataSize	= 6
+   835
+   836 2389			@exit
+   837 					.ifdef @new
+   838 					lda <@VarData
+   839 					sta :ztmp
+   840 					lda >@VarData
+   841 					ldy #@VarDataSize-1
+   842 					jmp @FreeMem
+   843 					els
+   844 2389 60				rts						; ret
+   845 					eif
+   846 				.endl
+   847
+   848 				; ------------------------------------------------------------
+   849 				; ------------------------------------------------------------
+   850 238A			@UnitInit
+   851
+   852 				; optimize FAIL ('MISC.DETECTANTIC', RMT), line = 159
+   853
+   854 238A 20 A5 22			jsr MISC.DETECTANTIC
+   855 238D AD 25 31			lda MISC.DETECTANTIC.RESULT
+   856 2390 F0 05			jeq l_00A6
+   857
+   858 				; optimize OK (RMT), line = 160
+   859
+   860 2392 A9 00			lda #$00
+   861 2394 4C 99 23			jmp l_00B4
+   862 2397			l_00A6
+   863
+   864 				; optimize OK (RMT), line = 162
+   865
+   866 2397 A9 04			lda #$04
+   867 2399			l_00B4
+   868 2399 8D 26 31			sta NTSC
+   869
+   870 239C 60				rts
+   871
+   872 				; ------------------------------------------------------------
+   873
+   874 = 3126			NTSC	= DATAORIGIN+$000E
+   875
+   876 				.endl							; UNIT RMT
+   877
+   878 239D			.local	WAIT4SCREEN					; PROCEDURE | ASSEMBLER
+   879
+   880 				; -------------------  ASM Block 00000075  -------------------
+   881
+   882 239D AD 0B D4		  lda $d40b
+   883 23A0 D0 FB		  bne *-3
+   884 23A2 AD 0B D4		  lda $d40b
+   885 23A5 F0 FB		  beq *-3
+   886
+   887 23A7			@exit
+   888 					.ifdef @new
+   889 					lda <@VarData
+   890 					sta :ztmp
+   891 					lda >@VarData
+   892 					ldy #@VarDataSize-1
+   893 					jmp @FreeMem
+   894 					els
+   895 23A7 60				rts						; ret
+   896 					eif
+   897 				.endl
+   898
+   899 23A8			.local	PLAYSFX						; PROCEDURE
+   900 23A8 8D 46 31			sta NSFX
+   901
+   902 				; optimize OK (game_helpers.pas), line = 13
+   903
+   904 23AB C9 15			cmp #$15
+   905 23AD D0 0D			jne l_00CE
+   906
+   907 				; optimize OK (game_helpers.pas), line = 14
+   908
+   909 23AF 8D 30 31			sta RMT.TRMT.SFX.EFFECT
+   910 23B2 A9 02			lda #$02
+   911 23B4 8D 31 31			sta RMT.TRMT.SFX.CHANNEL
+   912 23B7 A9 01			lda #$01
+   913 23B9 4C C9 23			jmp l_00DE
+   914 23BC			l_00CE
+   915
+   916 				; optimize OK (game_helpers.pas), line = 16
+   917
+   918 23BC AD 46 31			lda NSFX
+   919 23BF 8D 30 31			sta RMT.TRMT.SFX.EFFECT
+   920 23C2 A9 03			lda #$03
+   921 23C4 8D 31 31			sta RMT.TRMT.SFX.CHANNEL
+   922 23C7 A9 20			lda #$20
+   923 23C9			l_00DE
+   924 23C9 8D 32 31			sta RMT.TRMT.SFX.NOTE
+   925 23CC AD 97 30			lda MSX
+   926 23CF AC 98 30			ldy MSX+1
+   927 23D2 20 0B 23			jsr RMT.TRMT.SFX
+   928
+   929 				; ------------------------------------------------------------
+   930
+   931 = 3146			NSFX	= DATAORIGIN+$002E
+   932
+   933 = 3146			@VarData	= NSFX
+   934 = 0001			@VarDataSize	= 1
+   935
+   936 23D5			@exit
+   937 					.ifdef @new
+   938 					lda <@VarData
+   939 					sta :ztmp
+   940 					lda >@VarData
+   941 					ldy #@VarDataSize-1
+   942 					jmp @FreeMem
+   943 					els
+   944 23D5 60				rts						; ret
+   945 					eif
+   946 				.endl
+   947
+   948 23D6			.local	TURNOFF						; PROCEDURE
+   949
+   950 				; optimize FAIL ('WAIT4SCREEN', game_helpers.pas), line = 72
+   951
+   952 23D6 20 9D 23			jsr WAIT4SCREEN
+   953
+   954 				; optimize OK (game_helpers.pas), line = 73
+   955
+   956 23D9 A9 00			lda #$00
+   957 23DB 8D 2F 02			sta ATARI.SDMCTL
+   958
+   959 				; optimize FAIL ('WAIT4SCREEN', game_helpers.pas), line = 74
+   960
+   961 23DE 20 9D 23			jsr WAIT4SCREEN
+   962
+   963 				; optimize OK (game_helpers.pas), line = 75
+   964
+   965 23E1 A9 00			lda #$00
+   966 23E3 8D 0E D4			sta IRQST
+   967
+   968 23E6			@exit
+   969 					.ifdef @new
+   970 					lda <@VarData
+   971 					sta :ztmp
+   972 					lda >@VarData
+   973 					ldy #@VarDataSize-1
+   974 					jmp @FreeMem
+   975 					els
+   976 23E6 60				rts						; ret
+   977 					eif
+   978 				.endl
+   979
+   980 23E7			.local	TURNON						; PROCEDURE
+   981
+   982 				; optimize OK (game_helpers.pas), line = 80
+   983
+   984 23E7 AD 48 31			lda VBL+1
+   985 23EA 0D 47 31			ora VBL
+   986 23ED F0 14			jeq l_0107
+   987
+   988 				; optimize OK (game_helpers.pas), line = 81
+   989
+   990 23EF AD 47 31			lda VBL
+   991 23F2 A0 05			ldy #5
+   992 23F4 8D 0A D4			sta wsync
+   993 23F7 88				dey
+   994 23F8 D0 FD			rne
+   995 23FA 8D 24 02			sta VVBLKD
+   996 23FD AD 48 31			lda VBL+1
+   997 2400 8D 25 02			sta VVBLKD+1
+   998 2403			l_0107
+   999
+  1000 				; optimize OK (game_helpers.pas), line = 82
+  1001
+  1002 2403 AD 4A 31			lda DLI+1
+  1003 2406 0D 49 31			ora DLI
+  1004 2409 F0 0C			jeq l_011D
+  1005
+  1006 				; optimize OK (game_helpers.pas), line = 83
+  1007
+  1008 240B AD 49 31 8D 00 02		mva DLI VDSLST
+  1009 2411 AD 4A 31 8D 01 02		mva DLI+1 VDSLST+1
+  1010 2417			l_011D
+  1011
+  1012 				; optimize OK (game_helpers.pas), line = 84
+  1013
+  1014 2417 A9 C0			lda #$C0
+  1015 2419 8D 0E D4			sta IRQST
+  1016
+  1017 				; optimize FAIL ('WAIT4SCREEN', game_helpers.pas), line = 86
+  1018
+  1019 241C 20 9D 23			jsr WAIT4SCREEN
+  1020
+  1021 				; optimize OK (game_helpers.pas), line = 87
+  1022
+  1023 241F AD 4B 31			lda DMACTL
+  1024 2422 8D 2F 02			sta ATARI.SDMCTL
+  1025
+  1026 				; ------------------------------------------------------------
+  1027
+  1028 = 3147			VBL	= DATAORIGIN+$002F
+  1029 = 3149			DLI	= DATAORIGIN+$0031
+  1030 = 314B			DMACTL	= DATAORIGIN+$0033
+  1031
+  1032 = 3147			@VarData	= VBL
+  1033 = 0005			@VarDataSize	= 5
+  1034
+  1035 2425			@exit
+  1036 					.ifdef @new
+  1037 					lda <@VarData
+  1038 					sta :ztmp
+  1039 					lda >@VarData
+  1040 					ldy #@VarDataSize-1
+  1041 					jmp @FreeMem
+  1042 					els
+  1043 2425 60				rts						; ret
+  1044 					eif
+  1045 				.endl
+  1046
+  1047 2426			.local	PUTDINO						; PROCEDURE
+  1048
+  1049 				; optimize OK (pmg.pas), line = 46
+  1050
+  1051 2426 A5 56			lda DINOX
+  1052 2428 C9 30			cmp #$30
+  1053 242A B0 04			jcs l_0143
+  1054 242C A9 30			lda #$30
+  1055 242E 85 56			sta DINOX
+  1056 2430			l_0143
+  1057
+  1058 				; optimize OK (pmg.pas), line = 47
+  1059
+  1060 2430 A5 56			lda DINOX
+  1061 2432 C9 D5			cmp #$D5
+  1062 2434 90 04			jcc l_015C
+  1063 2436 A9 D4			lda #$D4
+  1064 2438 85 56			sta DINOX
+  1065 243A			l_015C
+  1066
+  1067 				; optimize OK (pmg.pas), line = 48
+  1068
+  1069 243A A5 56			lda DINOX
+  1070 243C 8D 00 D0			sta adr.HPOSP
+  1071
+  1072 				; optimize OK (pmg.pas), line = 49
+  1073
+  1074 243F 8D 01 D0			sta adr.HPOSP+$01
+  1075
+  1076 				; optimize OK (pmg.pas), line = 50
+  1077
+  1078 2442 AD 4E 31			lda ODINOY
+  1079 2445 C5 57			cmp DINOY
+  1080 2447 F0 77			jeq l_0185
+  1081
+  1082 				; optimize OK (pmg.pas), line = 52
+  1083
+  1084 2449 A5 57			lda DINOY
+  1085 244B C9 40			cmp #$40
+  1086 244D B0 04			jcs l_0198
+  1087 244F A9 40			lda #$40
+  1088 2451 85 57			sta DINOY
+  1089 2453			l_0198
+  1090
+  1091 				; optimize OK (pmg.pas), line = 53
+  1092
+  1093 2453 A5 57			lda DINOY
+  1094 2455 C9 B9			cmp #$B9
+  1095 2457 90 04			jcc l_01B1
+  1096 2459 A9 B8			lda #$B8
+  1097 245B 85 57			sta DINOY
+  1098 245D			l_01B1
+  1099
+  1100 				; optimize OK (pmg.pas), line = 54
+  1101
+  1102 245D A5 57			lda DINOY
+  1103 245F CD 4E 31			cmp ODINOY
+  1104 2462 B0 24			jcs l_01CC
+  1105
+  1106 				; optimize OK (pmg.pas), line = 56
+  1107
+  1108 2464 AD 4E 31			lda ODINOY
+  1109 2467 38 E5 57			sub DINOY
+  1110 246A 8D 5A 31			sta DY
+  1111 246D 38 E9 11			sub #$11
+  1112 2470 50 02			svc
+  1113 2472 49 80			eor #$80
+  1114 2474 30 05			jmi l_01EB
+  1115 2476 A9 10			lda #$10
+  1116 2478 8D 5A 31			sta DY
+  1117 247B			l_01EB
+  1118
+  1119 				; optimize OK (pmg.pas), line = 57
+  1120
+  1121 247B AD 4E 31			lda ODINOY
+  1122 247E 18 69 10			add #$10
+  1123 2481 38 ED 5A 31			sub DY
+  1124 2485 4C A2 24			jmp l_020B
+  1125 2488			l_01CC
+  1126
+  1127 				; optimize OK (pmg.pas), line = 61
+  1128
+  1129 2488 A5 57			lda DINOY
+  1130 248A 38 ED 4E 31			sub ODINOY
+  1131 248E 8D 5A 31			sta DY
+  1132 2491 38 E9 11			sub #$11
+  1133 2494 50 02			svc
+  1134 2496 49 80			eor #$80
+  1135 2498 30 05			jmi l_0229
+  1136 249A A9 10			lda #$10
+  1137 249C 8D 5A 31			sta DY
+  1138 249F			l_0229
+  1139
+  1140 				; optimize OK (pmg.pas), line = 62
+  1141
+  1142 249F AD 4E 31			lda ODINOY
+  1143 24A2			l_020B
+  1144 24A2 8D 5B 31			sta Z
+  1145
+  1146 				; optimize OK (pmg.pas), line = 64
+  1147
+  1148 24A5 F0 16			jeq l_0248
+  1149
+  1150 				; -------------------  ASM Block 00000077  -------------------
+  1151
+  1152 24A7 8A 48		        txa:pha
+  1153 24A9 AC 5B 31		        ldy z
+  1154 24AC AE 5A 31		        ldx dy
+  1155 24AF A9 00		        lda #0
+  1156 24B1			      lzero:
+  1157 24B1 99 00 B4		        sta adr._PL0,y
+  1158 24B4 99 00 B5		        sta adr._PL1,y
+  1159 24B7 C8			        iny
+  1160 24B8 CA			        dex
+  1161 24B9 10 F6		        bpl lzero
+  1162 24BB 68 AA		        pla:tax
+  1163 				      
+  1164 24BD			l_0248
+  1165 24BD 4C C5 24			jmp l_0254
+  1166 24C0			l_0185
+  1167
+  1168 				; optimize OK (pmg.pas), line = 82
+  1169
+  1170 24C0 A9 00			lda #$00
+  1171 24C2 8D 5B 31			sta Z
+  1172 24C5			l_0254
+  1173
+  1174 				; optimize OK (pmg.pas), line = 83
+  1175
+  1176 24C5 AD 4F 31			lda DINOFRM
+  1177 24C8 CD 50 31			cmp ODINOFRM
+  1178 24CB D0 07			jne l_027Ax
+  1179 24CD AD 4E 31			lda ODINOY
+  1180 24D0 C5 57			cmp DINOY
+  1181 24D2 F0 3C			jeq l_027A
+  1182 24D4			l_027Ax
+  1183
+  1184 				; -------------------  ASM Block 00000078  -------------------
+  1185
+  1186 24D4 8A 48		      txa:pha
+  1187 24D6 AD 4F 31		      lda DINOFrm
+  1188 24D9 0A			      asl @
+  1189 24DA AA			      tax
+  1190
+  1191 24DB BD 00 20		      lda adr.DINOP0,x
+  1192 24DE 85 50		      sta ptr1
+  1193 24E0 BD 01 20		      lda adr.DINOP0+1,x
+  1194 24E3 85 51		      sta ptr1+1
+  1195
+  1196 24E5 BD 14 20		      lda adr.DINOP1,x
+  1197 24E8 85 52		      sta ptr2
+  1198 24EA BD 15 20		      lda adr.DINOP1+1,x
+  1199 24ED 85 53		      sta ptr2+1
+  1200
+  1201 24EF A0 00		      ldy #0
+  1202 24F1 A6 57		      ldx DINOY
+  1203 24F3			    ldraw:
+  1204 24F3 B1 50		      lda (ptr1),y
+  1205 24F5 9D 00 B4		      sta adr._PL0,x
+  1206 24F8 B1 52		      lda (ptr2),y
+  1207 24FA 9D 00 B5		      sta adr._PL1,x
+  1208 24FD E8			      inx
+  1209 24FE C8			      iny
+  1210 24FF C0 10		      cpy #16
+  1211 2501 D0 F0		      bne ldraw
+  1212 2503 68 AA		      pla:tax
+  1213 				    
+  1214 				; optimize OK (pmg.pas), line = 115
+  1215
+  1216 2505 AD 4F 31			lda DINOFRM
+  1217 2508 8D 50 31			sta ODINOFRM
+  1218
+  1219 				; optimize OK (pmg.pas), line = 116
+  1220
+  1221 250B A5 57			lda DINOY
+  1222 250D 8D 4E 31			sta ODINOY
+  1223 2510			l_027A
+  1224
+  1225 				; ------------------------------------------------------------
+  1226
+  1227 = 315A			DY	= DATAORIGIN+$0042
+  1228 = 315B			Z	= DATAORIGIN+$0043
+  1229
+  1230 = 315A			@VarData	= DY
+  1231 = 0002			@VarDataSize	= 2
+  1232
+  1233 2510			@exit
+  1234 					.ifdef @new
+  1235 					lda <@VarData
+  1236 					sta :ztmp
+  1237 					lda >@VarData
+  1238 					ldy #@VarDataSize-1
+  1239 					jmp @FreeMem
+  1240 					els
+  1241 2510 60				rts						; ret
+  1242 					eif
+  1243 				.endl
+  1244
+  1245 2511			.local	PUTSTONE					; PROCEDURE
+  1246
+  1247 				; optimize OK (pmg.pas), line = 126
+  1248
+  1249 2511 AD 53 31			lda STONEX
+  1250 2514 8D 02 D0			sta adr.HPOSP+$02
+  1251
+  1252 				; optimize OK (pmg.pas), line = 127
+  1253
+  1254 2517 AD 57 31			lda OSTONEY
+  1255 251A CD 54 31			cmp STONEY
+  1256 251D D0 03 4C B9 25		jeq l_02A8
+  1257
+  1258 				; optimize OK (pmg.pas), line = 129
+  1259
+  1260 2522 AD 54 31			lda STONEY
+  1261 2525 C9 FF			cmp #$FF
+  1262 2527 D0 15			jne l_02BB
+  1263
+  1264 				; -------------------  ASM Block 00000079  -------------------
+  1265
+  1266 2529 8A 48		        txa:pha
+  1267 252B AC 57 31		        ldy oSTONEY
+  1268 252E A2 10		        ldx #16
+  1269 2530 A9 00		        lda #0
+  1270 2532			      lzero1:
+  1271 2532 99 00 B6		        sta adr._PL2,y
+  1272 2535 C8			        iny
+  1273 2536 CA			        dex
+  1274 2537 10 F9		        bpl lzero1
+  1275 2539 68 AA		        pla:tax
+  1276 				      
+  1277 253B 4C FD 25			jmp @exit
+  1278 253E			l_02BB
+  1279
+  1280 				; optimize OK (pmg.pas), line = 147
+  1281
+  1282 253E AD 54 31			lda STONEY
+  1283 2541 C9 20			cmp #$20
+  1284 2543 B0 05			jcs l_02D7
+  1285 2545 A9 20			lda #$20
+  1286 2547 8D 54 31			sta STONEY
+  1287 254A			l_02D7
+  1288
+  1289 				; optimize OK (pmg.pas), line = 148
+  1290
+  1291 254A AD 54 31			lda STONEY
+  1292 254D C9 B9			cmp #$B9
+  1293 254F 90 05			jcc l_02F0
+  1294 2551 A9 B8			lda #$B8
+  1295 2553 8D 54 31			sta STONEY
+  1296 2556			l_02F0
+  1297 2556			l_02C5
+  1298
+  1299 				; optimize OK (pmg.pas), line = 150
+  1300
+  1301 2556 AD 54 31			lda STONEY
+  1302 2559 CD 57 31			cmp OSTONEY
+  1303 255C B0 25			jcs l_030B
+  1304
+  1305 				; optimize OK (pmg.pas), line = 152
+  1306
+  1307 255E AD 57 31			lda OSTONEY
+  1308 2561 38 ED 54 31			sub STONEY
+  1309 2565 8D 5C 31			sta DY
+  1310 2568 38 E9 11			sub #$11
+  1311 256B 50 02			svc
+  1312 256D 49 80			eor #$80
+  1313 256F 30 05			jmi l_032A
+  1314 2571 A9 10			lda #$10
+  1315 2573 8D 5C 31			sta DY
+  1316 2576			l_032A
+  1317
+  1318 				; optimize OK (pmg.pas), line = 153
+  1319
+  1320 2576 AD 57 31			lda OSTONEY
+  1321 2579 18 69 10			add #$10
+  1322 257C 38 ED 5C 31			sub DY
+  1323 2580 4C 9E 25			jmp l_034A
+  1324 2583			l_030B
+  1325
+  1326 				; optimize OK (pmg.pas), line = 157
+  1327
+  1328 2583 AD 54 31			lda STONEY
+  1329 2586 38 ED 57 31			sub OSTONEY
+  1330 258A 8D 5C 31			sta DY
+  1331 258D 38 E9 11			sub #$11
+  1332 2590 50 02			svc
+  1333 2592 49 80			eor #$80
+  1334 2594 30 05			jmi l_0368
+  1335 2596 A9 10			lda #$10
+  1336 2598 8D 5C 31			sta DY
+  1337 259B			l_0368
+  1338
+  1339 				; optimize OK (pmg.pas), line = 158
+  1340
+  1341 259B AD 57 31			lda OSTONEY
+  1342 259E			l_034A
+  1343 259E 8D 5D 31			sta Z
+  1344
+  1345 				; optimize OK (pmg.pas), line = 160
+  1346
+  1347 25A1 F0 13			jeq l_0387
+  1348
+  1349 				; -------------------  ASM Block 00000080  -------------------
+  1350
+  1351 25A3 8A 48		        txa:pha
+  1352 25A5 AC 5D 31		        ldy z
+  1353 25A8 AE 5C 31		        ldx dy
+  1354 25AB A9 00		        lda #0
+  1355 25AD			      lzero:
+  1356 25AD 99 00 B6		        sta adr._PL2,y
+  1357 25B0 C8			        iny
+  1358 25B1 CA			        dex
+  1359 25B2 10 F9		        bpl lzero
+  1360 25B4 68 AA		        pla:tax
+  1361 				      
+  1362 25B6			l_0387
+  1363 25B6 4C BE 25			jmp l_0393
+  1364 25B9			l_02A8
+  1365
+  1366 				; optimize OK (pmg.pas), line = 177
+  1367
+  1368 25B9 A9 00			lda #$00
+  1369 25BB 8D 5D 31			sta Z
+  1370 25BE			l_0393
+  1371
+  1372 				; optimize OK (pmg.pas), line = 178
+  1373
+  1374 25BE AD 58 31			lda STONEFRM
+  1375 25C1 CD 59 31			cmp OSTONEFRM
+  1376 25C4 D0 08			jne l_03B9x
+  1377 25C6 AD 57 31			lda OSTONEY
+  1378 25C9 CD 54 31			cmp STONEY
+  1379 25CC F0 2F			jeq l_03B9
+  1380 25CE			l_03B9x
+  1381
+  1382 				; -------------------  ASM Block 00000081  -------------------
+  1383
+  1384 25CE 8A 48		      txa:pha
+  1385 25D0 AD 58 31		      lda STONEFrm
+  1386 25D3 0A			      asl @
+  1387 25D4 AA			      tax
+  1388
+  1389 25D5 BD 28 20		      lda adr.STONEP2,x
+  1390 25D8 85 50		      sta ptr1
+  1391 25DA BD 29 20		      lda adr.STONEP2+1,x
+  1392 25DD 85 51		      sta ptr1+1
+  1393
+  1394 25DF A0 00		      ldy #0
+  1395 25E1 AE 54 31		      ldx STONEY
+  1396 25E4			    ldraw:
+  1397 25E4 B1 50		      lda (ptr1),y
+  1398 25E6 9D 00 B6		      sta adr._PL2,x
+  1399 25E9 E8			      inx
+  1400 25EA C8			      iny
+  1401 25EB C0 10		      cpy #16
+  1402 25ED D0 F5		      bne ldraw
+  1403 25EF 68 AA		      pla:tax
+  1404 				    
+  1405 				; optimize OK (pmg.pas), line = 202
+  1406
+  1407 25F1 AD 58 31			lda STONEFRM
+  1408 25F4 8D 59 31			sta OSTONEFRM
+  1409
+  1410 				; optimize OK (pmg.pas), line = 203
+  1411
+  1412 25F7 AD 54 31			lda STONEY
+  1413 25FA 8D 57 31			sta OSTONEY
+  1414 25FD			l_03B9
+  1415
+  1416 				; ------------------------------------------------------------
+  1417
+  1418 = 315C			DY	= DATAORIGIN+$0044
+  1419 = 315D			Z	= DATAORIGIN+$0045
+  1420
+  1421 = 315C			@VarData	= DY
+  1422 = 0002			@VarDataSize	= 2
+  1423
+  1424 25FD			@exit
+  1425 					.ifdef @new
+  1426 					lda <@VarData
+  1427 					sta :ztmp
+  1428 					lda >@VarData
+  1429 					ldy #@VarDataSize-1
+  1430 					jmp @FreeMem
+  1431 					els
+  1432 25FD 60				rts						; ret
+  1433 					eif
+  1434 				.endl
+  1435
+  1436 25FE			.local	PMGCLEAR					; PROCEDURE | ASSEMBLER
+  1437
+  1438 				; -------------------  ASM Block 00000082  -------------------
+  1439
+  1440 25FE A0 00		    ldy #0
+  1441 2600 A9 00		    lda #0
+  1442 2602			  lzero:
+  1443 2602 99 00 B4		    sta adr._PL0,y
+  1444 2605 99 00 B5		    sta adr._PL1,y
+  1445 2608 88			    dey
+  1446 2609 D0 F7		    bne lzero
+  1447
+  1448 260B			@exit
+  1449 					.ifdef @new
+  1450 					lda <@VarData
+  1451 					sta :ztmp
+  1452 					lda >@VarData
+  1453 					ldy #@VarDataSize-1
+  1454 					jmp @FreeMem
+  1455 					els
+  1456 260B 60				rts						; ret
+  1457 					eif
+  1458 				.endl
+  1459
+  1460 260C			.local	VBL_TITLE_SCREEN				; PROCEDURE | INTERRUPT
+  1461
+  1462 				; -------------------  ASM Block 00000083  -------------------
+  1463
+  1464 = E462			    xitvbl      = $e462
+  1465 = E45C			    sysvbv      = $e45c
+  1466 = D301			    portb       = $d301
+  1467
+  1468 260C 48 8A 48 98 48	      phr
+  1469
+  1470 2611 A2 06		      ldx #6
+  1471 2613			  tmLoop:
+  1472 2613 B5 D4		      lda adr.timer,x
+  1473 2615 F0 02		      beq tmNext
+  1474 2617 D6 D4		      dec adr.timer,x
+  1475 2619			  tmNext:
+  1476 2619 CA			      dex
+  1477 261A 10 F7		      bpl tmLoop
+  1478 				  
+  1479 				; -------------------  ASM Block 00000084  -------------------
+  1480
+  1481 261C CE 01 D3		    dec PORTB
+  1482 				  
+  1483 				; optimize FAIL ('RMT.TRMT.PLAY', title_vbl.pas), line = 23
+  1484
+  1485 261F AD 97 30			lda MSX
+  1486 2622 AC 98 30			ldy MSX+1
+  1487 2625 20 4A 23			jsr RMT.TRMT.PLAY
+  1488
+  1489 				; -------------------  ASM Block 00000085  -------------------
+  1490
+  1491 2628 EE 01 D3		    inc PORTB
+  1492 				  
+  1493 				; -------------------  ASM Block 00000086  -------------------
+  1494
+  1495 262B 68 A8 68 AA 68	      plr
+  1496 2630 4C 62 E4		      jmp xitvbl
+  1497 				  
+  1498 2633 40				rti						; ret
+  1499 				.endl
+  1500
+  1501 2634			.local	DLI_TITLE_SCREEN				; PROCEDURE | ASSEMBLER | INTERRUPT
+  1502
+  1503 				; -------------------  ASM Block 00000087  -------------------
+  1504
+  1505 = 006D			  _regA = $6D;
+  1506 = 006E			  _regX = $6E;
+  1507 = 006F			  _regY = $6F;
+  1508
+  1509 2634			dli0:
+  1510 2634 85 6D		  sta _regA
+  1511 2636 86 6E		  stx _regX
+  1512
+  1513 2638 A9 94		  lda #$94
+  1514 263A 8D 0A D4		  sta WSYNC
+  1515 263D 8D 09 D4		  sta chbase
+  1516
+  1517 2640 A9 4F		  lda #<DLI1
+  1518 2642 A2 26		  ldx #>DLI1
+  1519 2644 8D 00 02		  sta VDSLST
+  1520 2647 8E 01 02		  stx VDSLST+1
+  1521
+  1522 264A A5 6D		  lda _regA
+  1523 264C A6 6E		  ldx _regX
+  1524 264E 40			  rti
+  1525
+  1526 264F			dli1:
+  1527 264F 85 6D		  sta _regA
+  1528 2651 86 6E		  stx _regX
+  1529
+  1530 2653 A9 90		  lda #$90
+  1531 2655 8D 0A D4		  sta WSYNC
+  1532 2658 8D 09 D4		  sta chbase
+  1533
+  1534 265B A9 6A		  lda #<DLI2
+  1535 265D A2 26		  ldx #>DLI2
+  1536 265F 8D 00 02		  sta VDSLST
+  1537 2662 8E 01 02		  stx VDSLST+1
+  1538
+  1539 2665 A5 6D		  lda _regA
+  1540 2667 A6 6E		  ldx _regX
+  1541 2669 40			  rti
+  1542
+  1543 266A			dli2:
+  1544 266A 85 6D		  sta _regA
+  1545 266C 86 6E		  stx _regX
+  1546
+  1547 266E A9 94		  lda #$94
+  1548 2670 8D 0A D4		  sta WSYNC
+  1549 2673 8D 09 D4		  sta chbase
+  1550
+  1551 2676 A9 85		  lda #<DLI3
+  1552 2678 A2 26		  ldx #>DLI3
+  1553 267A 8D 00 02		  sta VDSLST
+  1554 267D 8E 01 02		  stx VDSLST+1
+  1555
+  1556 2680 A5 6D		  lda _regA
+  1557 2682 A6 6E		  ldx _regX
+  1558 2684 40			  rti
+  1559
+  1560 2685			dli3:
+  1561 2685 85 6D		  sta _regA
+  1562 2687 86 6E		  stx _regX
+  1563
+  1564 2689 A9 90		  lda #$90
+  1565 268B 8D 0A D4		  sta WSYNC
+  1566 268E 8D 09 D4		  sta chbase
+  1567
+  1568 2691 A9 A0		  lda #<DLI4
+  1569 2693 A2 26		  ldx #>DLI4
+  1570 2695 8D 00 02		  sta VDSLST
+  1571 2698 8E 01 02		  stx VDSLST+1
+  1572
+  1573 269B A5 6D		  lda _regA
+  1574 269D A6 6E		  ldx _regX
+  1575 269F 40			  rti
+  1576
+  1577 26A0			dli4:
+  1578 26A0 85 6D		  sta _regA
+  1579 26A2 86 6E		  stx _regX
+  1580
+  1581 26A4 A9 94		  lda #$94
+  1582 26A6 8D 0A D4		  sta WSYNC
+  1583 26A9 8D 09 D4		  sta chbase
+  1584
+  1585 26AC A9 BB		  lda #<DLI5
+  1586 26AE A2 26		  ldx #>DLI5
+  1587 26B0 8D 00 02		  sta VDSLST
+  1588 26B3 8E 01 02		  stx VDSLST+1
+  1589
+  1590 26B6 A5 6D		  lda _regA
+  1591 26B8 A6 6E		  ldx _regX
+  1592 26BA 40			  rti
+  1593
+  1594 26BB			dli5:
+  1595 26BB 85 6D		  sta _regA
+  1596 26BD 86 6E		  stx _regX
+  1597
+  1598 26BF A9 90		  lda #$90
+  1599 26C1 8D 0A D4		  sta WSYNC
+  1600 26C4 8D 09 D4		  sta chbase
+  1601
+  1602 26C7 A9 34		  lda #<DLI0
+  1603 26C9 A2 26		  ldx #>DLI0
+  1604 26CB 8D 00 02		  sta VDSLST
+  1605 26CE 8E 01 02		  stx VDSLST+1
+  1606
+  1607 26D1 A5 6D		  lda _regA
+  1608 26D3 A6 6E		  ldx _regX
+  1609 26D5 40			  rti
+  1610
+  1611
+  1612 26D6 40				rti						; ret
+  1613 				.endl
+  1614
+  1615 26D7			.local	INIT_TITLE					; PROCEDURE
+  1616
+  1617 				; optimize FAIL ('TURNOFF', title.pas), line = 6
+  1618
+  1619 26D7 20 D6 23			jsr TURNOFF
+  1620
+  1621 				; optimize OK (title.pas), line = 7
+  1622
+  1623 26DA A9 90			lda #$90
+  1624 26DC 8D 30 02			sta DL
+  1625 26DF A9 BF			lda #$BF
+  1626 26E1 8D 31 02			sta DL+1
+  1627
+  1628 				; optimize OK (title.pas), line = 8
+  1629
+  1630 26E4 A9 90			lda #$90
+  1631 26E6 8D F4 02			sta CHBAS
+  1632
+  1633 				; optimize OK (title.pas), line = 10
+  1634
+  1635 26E9 A9 00			lda #$00
+  1636 26EB 8D C4 02			sta adr.FCOL
+  1637 26EE A9 16			lda #$16
+  1638 26F0 8D C5 02			sta adr.FCOL+$01
+  1639 26F3 A9 1E			lda #$1E
+  1640 26F5 8D C6 02			sta adr.FCOL+$02
+  1641 26F8 8D C7 02			sta adr.FCOL+$03
+  1642 26FB A9 00			lda #$00
+  1643 26FD 8D C8 02			sta adr.FCOL+$04
+  1644
+  1645 				; optimize OK (title.pas), line = 11
+  1646
+  1647 2700 A9 04			lda #$04
+  1648 2702 8D C0 02			sta adr.PCOLR
+  1649 2705 A9 CA			lda #$CA
+  1650 2707 8D C1 02			sta adr.PCOLR+$01
+  1651
+  1652 				; optimize FAIL ('PMGCLEAR', title.pas), line = 13
+  1653
+  1654 270A 20 FE 25			jsr PMGCLEAR
+  1655
+  1656 				; optimize OK (title.pas), line = 15
+  1657
+  1658 270D A9 0C			lda <VBL_TITLE_SCREEN
+  1659 270F 8D 47 31			sta TURNON.VBL
+  1660 2712 A9 26			lda >VBL_TITLE_SCREEN
+  1661 2714 8D 48 31			sta TURNON.VBL+1
+  1662 2717 A9 34			lda <DLI_TITLE_SCREEN
+  1663 2719 8D 49 31			sta TURNON.DLI
+  1664 271C A9 26			lda >DLI_TITLE_SCREEN
+  1665 271E 8D 4A 31			sta TURNON.DLI+1
+  1666 2721 A9 3F			lda #$3F
+  1667 2723 8D 4B 31			sta TURNON.DMACTL
+  1668 2726 20 E7 23			jsr TURNON
+  1669
+  1670 2729			@exit
+  1671 					.ifdef @new
+  1672 					lda <@VarData
+  1673 					sta :ztmp
+  1674 					lda >@VarData
+  1675 					ldy #@VarDataSize-1
+  1676 					jmp @FreeMem
+  1677 					els
+  1678 2729 60				rts						; ret
+  1679 					eif
+  1680 				.endl
+  1681
+  1682 272A			.local	TITLE_LOOP					; PROCEDURE
+  1683
+  1684 				; optimize OK (title.pas), line = 20
+  1685
+  1686 272A A9 00			lda #$00
+  1687 272C 8D 29 31			sta RMT.TRMT.INIT.A
+  1688 272F AD 97 30			lda MSX
+  1689 2732 AC 98 30			ldy MSX+1
+  1690 2735 20 CF 22			jsr RMT.TRMT.INIT
+  1691
+  1692 				; --- RepeatUntilProlog
+  1693 2738			l_0409
+  1694
+  1695 				; optimize OK (title.pas), line = 23
+  1696
+  1697 2738 AD 1F D0			lda ATARI.CONSOL
+  1698 273B C9 06			cmp #$06
+  1699 273D F0 05			jeq l_0409x
+  1700 273F AD 10 D0			lda adr.STRIG
+  1701 2742 D0 F4			jne l_0409
+  1702 2744			l_0409x
+  1703
+  1704 2744			@exit
+  1705 					.ifdef @new
+  1706 					lda <@VarData
+  1707 					sta :ztmp
+  1708 					lda >@VarData
+  1709 					ldy #@VarDataSize-1
+  1710 					jmp @FreeMem
+  1711 					els
+  1712 2744 60				rts						; ret
+  1713 					eif
+  1714 				.endl
+  1715
+  1716 2745			.local	VBL_GAME_SCREEN					; PROCEDURE | INTERRUPT
+  1717
+  1718 				; -------------------  ASM Block 00000088  -------------------
+  1719
+  1720 = E462			    xitvbl      = $e462
+  1721 = E45C			    sysvbv      = $e45c
+  1722 = D301			    portb       = $d301
+  1723
+  1724 2745 48 8A 48 98 48	      phr
+  1725
+  1726 				;      lda #<MAIN.DLI_GAME_SCREEN.START
+  1727 				;      ldx #>MAIN.DLI_GAME_SCREEN.START
+  1728 				;      sta VDSLST
+  1729 				;      stx VDSLST+1
+  1730
+  1731
+  1732 274A A2 06		      ldx #6
+  1733 274C			  tmLoop:
+  1734 274C B5 D4		      lda adr.timer,x
+  1735 274E F0 02		      beq tmNext
+  1736 2750 D6 D4		      dec adr.timer,x
+  1737 2752			  tmNext:
+  1738 2752 CA			      dex
+  1739 2753 10 F7		      bpl tmLoop
+  1740 				  
+  1741 				; optimize OK (game_vbl.pas), line = 42
+  1742
+  1743 2755 AD 45 31			lda GAMESTATE
+  1744 2758 C9 03			cmp #$03
+  1745 275A B0 06			jcs l_0436
+  1746
+  1747 				; optimize FAIL ('PUTDINO', game_vbl.pas), line = 44
+  1748
+  1749 275C 20 26 24			jsr PUTDINO
+  1750
+  1751 				; optimize FAIL ('PUTSTONE', game_vbl.pas), line = 45
+  1752
+  1753 275F 20 11 25			jsr PUTSTONE
+  1754 2762			l_0436
+  1755
+  1756 				; -------------------  ASM Block 00000089  -------------------
+  1757
+  1758 2762 CE 01 D3		    dec PORTB
+  1759 				  
+  1760 				; optimize FAIL ('RMT.TRMT.PLAY', game_vbl.pas), line = 55
+  1761
+  1762 2765 AD 97 30			lda MSX
+  1763 2768 AC 98 30			ldy MSX+1
+  1764 276B 20 4A 23			jsr RMT.TRMT.PLAY
+  1765
+  1766 				; -------------------  ASM Block 00000090  -------------------
+  1767
+  1768 276E EE 01 D3		    inc PORTB
+  1769 				  
+  1770 				; -------------------  ASM Block 00000091  -------------------
+  1771
+  1772 2771 68 A8 68 AA 68	      plr
+  1773 2776 4C 62 E4		      jmp xitvbl
+  1774 				  
+  1775 2779 40				rti						; ret
+  1776 				.endl
+  1777
+  1778 277A			.local	DLI_GAME_SCREEN					; PROCEDURE | ASSEMBLER | INTERRUPT
+  1779
+  1780 				; -------------------  ASM Block 00000092  -------------------
+  1781
+  1782 = 006D			  _regA = $6D;
+  1783 = 006E			  _regX = $6E;
+  1784 = 006F			  _regY = $6F;
+  1785
+  1786 277A			SKY0:
+  1787 277A 85 6D		  sta _regA
+  1788 277C 86 6E		  stx _regX
+  1789
+  1790 277E A9 82		  lda #$82
+  1791 2780 8D 0A D4		  sta WSYNC
+  1792 2783 8D 1A D0		  sta COLPF4
+  1793
+  1794 2786 A9 95		  lda #<SKY1
+  1795 2788 A2 27		  ldx #>SKY1
+  1796 278A 8D 00 02		  sta VDSLST
+  1797 278D 8E 01 02		  stx VDSLST+1
+  1798
+  1799 2790 A5 6D		  lda _regA
+  1800 2792 A6 6E		  ldx _regX
+  1801 2794 40			  rti
+  1802
+  1803 2795			SKY1:
+  1804 2795 85 6D		  sta _regA
+  1805 2797 86 6E		  stx _regX
+  1806
+  1807 2799 A9 84		  lda #$84
+  1808 279B 8D 0A D4		  sta WSYNC
+  1809 279E 8D 1A D0		  sta COLPF4
+  1810
+  1811 27A1 A9 B0		  lda #<SKY2
+  1812 27A3 A2 27		  ldx #>SKY2
+  1813 27A5 8D 00 02		  sta VDSLST
+  1814 27A8 8E 01 02		  stx VDSLST+1
+  1815
+  1816 27AB A5 6D		  lda _regA
+  1817 27AD A6 6E		  ldx _regX
+  1818 27AF 40			  rti
+  1819
+  1820 27B0			SKY2:
+  1821 27B0 85 6D		  sta _regA
+  1822 27B2 86 6E		  stx _regX
+  1823
+  1824 27B4 A9 86		  lda #$86
+  1825 27B6 8D 0A D4		  sta WSYNC
+  1826 27B9 8D 1A D0		  sta COLPF4
+  1827
+  1828 27BC A9 CB		  lda #<SKY3
+  1829 27BE A2 27		  ldx #>SKY3
+  1830 27C0 8D 00 02		  sta VDSLST
+  1831 27C3 8E 01 02		  stx VDSLST+1
+  1832
+  1833 27C6 A5 6D		  lda _regA
+  1834 27C8 A6 6E		  ldx _regX
+  1835 27CA 40			  rti
+  1836
+  1837 27CB			SKY3:
+  1838 27CB 85 6D		  sta _regA
+  1839 27CD 86 6E		  stx _regX
+  1840
+  1841 27CF A9 88		  lda #$88
+  1842 27D1 8D 0A D4		  sta WSYNC
+  1843 27D4 8D 1A D0		  sta COLPF4
+  1844
+  1845 27D7 A9 E6		  lda #<SKY4
+  1846 27D9 A2 27		  ldx #>SKY4
+  1847 27DB 8D 00 02		  sta VDSLST
+  1848 27DE 8E 01 02		  stx VDSLST+1
+  1849
+  1850 27E1 A5 6D		  lda _regA
+  1851 27E3 A6 6E		  ldx _regX
+  1852 27E5 40			  rti
+  1853
+  1854 27E6			SKY4:
+  1855 27E6 85 6D		  sta _regA
+  1856 27E8 86 6E		  stx _regX
+  1857
+  1858 27EA A9 8A		  lda #$8a
+  1859 27EC 8D 0A D4		  sta WSYNC
+  1860 27EF 8D 1A D0		  sta COLPF4
+  1861
+  1862 27F2 A9 01		  lda #<GND0
+  1863 27F4 A2 28		  ldx #>GND0
+  1864 27F6 8D 00 02		  sta VDSLST
+  1865 27F9 8E 01 02		  stx VDSLST+1
+  1866
+  1867 27FC A5 6D		  lda _regA
+  1868 27FE A6 6E		  ldx _regX
+  1869 2800 40			  rti
+  1870
+  1871 2801			GND0:
+  1872 2801 85 6D		  sta _regA
+  1873 2803 86 6E		  stx _regX
+  1874
+  1875 2805 A9 16		  lda #$16
+  1876 2807 8D 0A D4		  sta WSYNC
+  1877 280A 8D 1A D0		  sta COLPF4
+  1878
+  1879 280D A9 1C		  lda #<STS0
+  1880 280F A2 28		  ldx #>STS0
+  1881 2811 8D 00 02		  sta VDSLST
+  1882 2814 8E 01 02		  stx VDSLST+1
+  1883
+  1884 2817 A5 6D		  lda _regA
+  1885 2819 A6 6E		  ldx _regX
+  1886 281B 40			  rti
+  1887
+  1888 281C			STS0:
+  1889 281C 85 6D		  sta _regA
+  1890 281E 86 6E		  stx _regX
+  1891
+  1892 2820 A9 A4		  lda >FNT_STATUS
+  1893 2822 8D 0A D4		  sta WSYNC
+  1894 2825 8D 09 D4		  sta chbase
+  1895 2828 A9 C6		  lda #$c6
+  1896 282A 8D 17 D0		  sta COLPF1
+  1897
+  1898 282D A9 7A		  lda #<SKY0
+  1899 282F A2 27		  ldx #>SKY0
+  1900 2831 8D 00 02		  sta VDSLST
+  1901 2834 8E 01 02		  stx VDSLST+1
+  1902
+  1903 2837 A5 6D		  lda _regA
+  1904 2839 A6 6E		  ldx _regX
+  1905 283B 40			  rti
+  1906
+  1907 283C 40				rti						; ret
+  1908 				.endl
+  1909
+  1910 283D			.local	PREPARE_STAGE					; PROCEDURE
+  1911
+  1912 				; optimize OK (game.pas), line = 102
+  1913
+  1914 283D A9 00			lda #$00
+  1915 283F				m@fill $B800 8
+Macro: M@FILL [Source: macros.asm]
+     1 283F A0 7F			ldy #$7f
+     2 2841 99 00 B8 99 80 B8 + lp	:+8 sta $B800+#*$80,y
+     3 2859 88				dey
+     4 285A 10 E5			bpl lp
+  1916
+  1917 285C			@exit
+  1918 					.ifdef @new
+  1919 					lda <@VarData
+  1920 					sta :ztmp
+  1921 					lda >@VarData
+  1922 					ldy #@VarDataSize-1
+  1923 					jmp @FreeMem
+  1924 					els
+  1925 285C 60				rts						; ret
+  1926 					eif
+  1927 				.endl
+  1928
+  1929 285D			.local	INIT_GAME					; PROCEDURE
+  1930
+  1931 				; optimize FAIL ('TURNOFF', game.pas), line = 107
+  1932
+  1933 285D 20 D6 23			jsr TURNOFF
+  1934
+  1935 				; optimize OK (game.pas), line = 108
+  1936
+  1937 2860 A9 D0			lda #$D0
+  1938 2862 8D 30 02			sta DL
+  1939 2865 A9 BF			lda #$BF
+  1940 2867 8D 31 02			sta DL+1
+  1941
+  1942 				; optimize OK (game.pas), line = 109
+  1943
+  1944 286A A9 AC			lda #$AC
+  1945 286C 8D F4 02			sta CHBAS
+  1946
+  1947 				; optimize OK (game.pas), line = 111
+  1948
+  1949 286F A9 D0			lda #$D0
+  1950 2871 8D DF BF			sta $BFDF
+  1951 2874 A9 B8			lda #$B8
+  1952 2876 8D E0 BF			sta $BFDF+1
+  1953
+  1954 				; optimize OK (game.pas), line = 113
+  1955
+  1956 2879 A9 00			lda #$00
+  1957 287B 8D C4 02			sta adr.FCOL
+  1958 287E A9 16			lda #$16
+  1959 2880 8D C5 02			sta adr.FCOL+$01
+  1960 2883 A9 1E			lda #$1E
+  1961 2885 8D C6 02			sta adr.FCOL+$02
+  1962 2888 A9 0F			lda #$0F
+  1963 288A 8D C7 02			sta adr.FCOL+$03
+  1964 288D A9 00			lda #$00
+  1965 288F 8D C8 02			sta adr.FCOL+$04
+  1966
+  1967 				; optimize OK (game.pas), line = 114
+  1968
+  1969 2892 A9 04			lda #$04
+  1970 2894 8D C0 02			sta adr.PCOLR
+  1971 2897 A9 CA			lda #$CA
+  1972 2899 8D C1 02			sta adr.PCOLR+$01
+  1973
+  1974 				; optimize FAIL ('PMGCLEAR', game.pas), line = 116
+  1975
+  1976 289C 20 FE 25			jsr PMGCLEAR
+  1977
+  1978 				; optimize FAIL ('PREPARE_STAGE', game.pas), line = 118
+  1979
+  1980 289F 20 3D 28			jsr PREPARE_STAGE
+  1981
+  1982 				; optimize OK (game.pas), line = 119
+  1983
+  1984 28A2 A9 00			lda #$00
+  1985 28A4 8D F1 BF			sta $BFF1
+  1986 28A7 A9 A8			lda #$A8
+  1987 28A9 8D F2 BF			sta $BFF1+1
+  1988
+  1989 				; optimize OK (game.pas), line = 121
+  1990
+  1991 28AC A9 45			lda <VBL_GAME_SCREEN
+  1992 28AE 8D 47 31			sta TURNON.VBL
+  1993 28B1 A9 27			lda >VBL_GAME_SCREEN
+  1994 28B3 8D 48 31			sta TURNON.VBL+1
+  1995 28B6 A9 7A			lda <DLI_GAME_SCREEN
+  1996 28B8 8D 49 31			sta TURNON.DLI
+  1997 28BB A9 27			lda >DLI_GAME_SCREEN
+  1998 28BD 8D 4A 31			sta TURNON.DLI+1
+  1999 28C0 A9 3E			lda #$3E
+  2000 28C2 8D 4B 31			sta TURNON.DMACTL
+  2001 28C5 20 E7 23			jsr TURNON
+  2002
+  2003 				; optimize OK (game.pas), line = 123
+  2004
+  2005 28C8 A9 22			lda #$22
+  2006 28CA 8D 6F 02			sta GPRIO
+  2007
+  2008 				; optimize OK (game.pas), line = 124
+  2009
+  2010 28CD A9 B0			lda #$B0
+  2011 28CF 8D 07 D4			sta PMBASE
+  2012
+  2013 				; optimize OK (game.pas), line = 125
+  2014
+  2015 28D2 A9 03			lda #$03
+  2016 28D4 8D 1D D0			sta PMCNTL
+  2017
+  2018 				; optimize OK (game.pas), line = 127
+  2019
+  2020 28D7 A9 80			lda #$80
+  2021 28D9 85 56			sta DINOX
+  2022
+  2023 				; optimize OK (game.pas), line = 128
+  2024
+  2025 28DB 85 57			sta DINOY
+  2026
+  2027 				; optimize OK (game.pas), line = 129
+  2028
+  2029 28DD A9 00			lda #$00
+  2030 28DF 8D 4F 31			sta DINOFRM
+  2031
+  2032 				; optimize OK (game.pas), line = 130
+  2033
+  2034 28E2 A9 80			lda #$80
+  2035 28E4 8D 5E 31			sta DINOSTATE
+  2036
+  2037 				; optimize OK (game.pas), line = 132
+  2038
+  2039 28E7 A9 FF			lda #$FF
+  2040 28E9 8D 63 31			sta PTEROSTATE
+  2041
+  2042 				; optimize FAIL (2, game.pas), line = 133
+  2043
+  2044 28EC E8				inx
+  2045 28ED A9 02 95 94			mva #$02 :STACKORIGIN,x
+  2046 28F1 A9 00 95 A4			mva #$00 :STACKORIGIN+STACKWIDTH,x
+  2047 28F5 E8				inx
+  2048 28F6 A9 C8 95 94			mva #$C8 :STACKORIGIN,x
+  2049 28FA A9 19			lda #$19
+  2050 28FC 20 87 22			jsr SYSTEM.RANDOM.@010180000
+  2051 28FF B5 94			lda :STACKORIGIN,x
+  2052 2901 18 6D 24 31			add SYSTEM.RANDOM.@010180000.RESULT
+  2053 2905 B4 93			ldy :STACKORIGIN-1,x
+  2054 2907 99 D4 00			sta adr.TIMER,y
+  2055 290A CA				dex
+  2056 290B CA				dex
+  2057
+  2058 				; optimize OK (game.pas), line = 134
+  2059
+  2060 290C A9 FF			lda #$FF
+  2061 290E 8D 67 31			sta STONESTATE
+  2062
+  2063 				; optimize OK (game.pas), line = 135
+  2064
+  2065 2911 A9 00			lda #$00
+  2066 2913 8D 6C 31			sta STONEDST
+  2067
+  2068 				; optimize OK (game.pas), line = 137
+  2069
+  2070 2916 A9 01			lda #$01
+  2071 2918 8D 45 31			sta GAMESTATE
+  2072
+  2073 291B			@exit
+  2074 					.ifdef @new
+  2075 					lda <@VarData
+  2076 					sta :ztmp
+  2077 					lda >@VarData
+  2078 					ldy #@VarDataSize-1
+  2079 					jmp @FreeMem
+  2080 					els
+  2081 291B 60				rts						; ret
+  2082 					eif
+  2083 				.endl
+  2084
+  2085 291C			.local	DINOANIM					; PROCEDURE | INLINE
+  2086
+  2087 					.MACRO m@INLINE
+  2088 				
+  2089 				; optimize OK (game.pas), line = 163
+  2090 				
+  2091 					lda DINOSTATE
+  2092 					ldy #1
+  2093 					and #$80
+  2094 					beq @+
+  2095 					dey
+  2096 				@
+  2097 					sty :STACKORIGIN+9
+  2098 					ldy #1
+  2099 					lda DINODX
+  2100 					beq @+
+  2101 					dey
+  2102 				@
+  2103 					sty :STACKORIGIN+10
+  2104 					ldy #1
+  2105 					lda DINODY
+  2106 					beq @+
+  2107 					dey
+  2108 				@
+  2109 					tya
+  2110 					and :STACKORIGIN+10
+  2111 					and :STACKORIGIN+9
+  2112 					jeq l_04E7
+  2113 				
+  2114 				; optimize OK (game.pas), line = 165
+  2115 				
+  2116 					lda DINOSTATE
+  2117 					ora #$80
+  2118 					sta DINOSTATE
+  2119 				
+  2120 				; optimize OK (game.pas), line = 166
+  2121 				
+  2122 					lda DINOFRM
+  2123 					and #$02
+  2124 					sta DINOFRM
+  2125 				l_04E7
+  2126 				
+  2127 				; optimize OK (game.pas), line = 169
+  2128 				
+  2129 					lda DINOSTATE
+  2130 					jmi l_0514
+  2131 				
+  2132 				; optimize OK (game.pas), line = 171
+  2133 				
+  2134 					lda adr.TIMER
+  2135 					jne l_0528
+  2136 				
+  2137 				; optimize OK (game.pas), line = 173
+  2138 				
+  2139 					lda #$03
+  2140 					sta adr.TIMER
+  2141 				
+  2142 				; optimize OK (game.pas), line = 174
+  2143 				
+  2144 					lda DINOSTATE
+  2145 					and #$10
+  2146 					jne l_0544
+  2147 				
+  2148 				; optimize OK (game.pas), line = 175
+  2149 				
+  2150 					lda DINOSTATE
+  2151 					and #$06
+  2152 					sta :STACKORIGIN+9
+  2153 					lda DINOFRM
+  2154 					and #$01
+  2155 					eor #$01
+  2156 					ora :STACKORIGIN+9
+  2157 					sta DINOFRM
+  2158 				l_0544
+  2159 				
+  2160 				; optimize OK (game.pas), line = 177
+  2161 				
+  2162 					lda DINODX
+  2163 					jeq l_0571
+  2164 				
+  2165 				; optimize OK (game.pas), line = 179
+  2166 				
+  2167 					lda DINOX
+  2168 					add DINODX
+  2169 					sta DINOX
+  2170 				
+  2171 				; optimize OK (game.pas), line = 180
+  2172 				
+  2173 					lda DINODX
+  2174 					jmi l_0587
+  2175 					jeq l_0587
+  2176 				
+  2177 				; optimize FAIL (0, game.pas), line = 181
+  2178 				
+  2179 					dec DINODX
+  2180 					jmp l_0595
+  2181 				l_0587
+  2182 				
+  2183 				; optimize FAIL (0, game.pas), line = 183
+  2184 				
+  2185 					inc DINODX
+  2186 				l_0595
+  2187 				
+  2188 				; optimize OK (game.pas), line = 184
+  2189 				
+  2190 					lda DINOSTATE
+  2191 					and #$18
+  2192 					jne l_05AF
+  2193 				
+  2194 				; optimize OK (game.pas), line = 185
+  2195 				
+  2196 					lda #$14
+  2197 					jsr PLAYSFX
+  2198 				l_05AF
+  2199 				l_0571
+  2200 				
+  2201 				; optimize OK (game.pas), line = 188
+  2202 				
+  2203 					lda DINOSTATE
+  2204 					and #$08
+  2205 					jne l_05CC
+  2206 				
+  2207 				; optimize OK (game.pas), line = 190
+  2208 				
+  2209 					lda DINOSTATE
+  2210 					and #$10
+  2211 					jne l_05E3
+  2212 				
+  2213 				; optimize OK (game.pas), line = 192
+  2214 				
+  2215 					lda DINODY
+  2216 					jeq l_05F6
+  2217 				
+  2218 				; optimize OK (game.pas), line = 194
+  2219 				
+  2220 					lda DINOY
+  2221 					add DINODY
+  2222 					sta DINOY
+  2223 				
+  2224 				; optimize OK (game.pas), line = 195
+  2225 				
+  2226 					lda DINODY
+  2227 					jmi l_060C
+  2228 					jeq l_060C
+  2229 				
+  2230 				; optimize FAIL (0, game.pas), line = 196
+  2231 				
+  2232 					dec DINODY
+  2233 					jmp l_061A
+  2234 				l_060C
+  2235 				
+  2236 				; optimize FAIL (0, game.pas), line = 198
+  2237 				
+  2238 					inc DINODY
+  2239 				l_061A
+  2240 				
+  2241 				; optimize OK (game.pas), line = 199
+  2242 				
+  2243 					lda GAMESTATE
+  2244 					cmp #$01
+  2245 					jne l_0630
+  2246 				
+  2247 				; optimize OK (game.pas), line = 200
+  2248 				
+  2249 					lda #$14
+  2250 					jsr PLAYSFX
+  2251 				l_0630
+  2252 				l_05F6
+  2253 					jmp l_0640
+  2254 				l_05E3
+  2255 				
+  2256 				; optimize OK (game.pas), line = 205
+  2257 				
+  2258 					lda DINODY
+  2259 					jpl l_0652
+  2260 				
+  2261 				; optimize OK (game.pas), line = 207
+  2262 				
+  2263 					lda DINOY
+  2264 					add DINODY
+  2265 					sta DINOY
+  2266 				
+  2267 				; optimize FAIL (0, game.pas), line = 208
+  2268 				
+  2269 					inc DINODY
+  2270 				
+  2271 				; optimize OK (game.pas), line = 209
+  2272 				
+  2273 					cmp #$40
+  2274 					jne l_066C
+  2275 				
+  2276 				; optimize OK (game.pas), line = 211
+  2277 				
+  2278 					lda #$01
+  2279 					sta GAMESTATE
+  2280 				
+  2281 				; optimize OK (game.pas), line = 212
+  2282 				
+  2283 					lda #$D0
+  2284 					sta $BFDF
+  2285 					lda #$B8
+  2286 					sta $BFDF+1
+  2287 				
+  2288 				; optimize FAIL ('PMGCLEAR', game.pas), line = 213
+  2289 				
+  2290 					jsr PMGCLEAR
+  2291 				
+  2292 				; optimize OK (game.pas), line = 214
+  2293 				
+  2294 					lda OUTDINOX
+  2295 					sta DINOX
+  2296 					lda OUTDINOY
+  2297 					sta DINOY
+  2298 				
+  2299 				; optimize OK (game.pas), line = 216
+  2300 				
+  2301 					lda #$80
+  2302 					sta DINOSTATE
+  2303 				
+  2304 				; optimize OK (game.pas), line = 217
+  2305 				
+  2306 					lda #$00
+  2307 					sta DINODX
+  2308 					sta DINODY
+  2309 				l_066C
+  2310 					jmp l_0698
+  2311 				l_0652
+  2312 				
+  2313 				; optimize OK (game.pas), line = 221
+  2314 				
+  2315 					lda DINOSTATE
+  2316 					and #$EF
+  2317 					sta DINOSTATE
+  2318 				l_0698
+  2319 				l_0640
+  2320 					jmp l_06AB
+  2321 				l_05CC
+  2322 				
+  2323 				; optimize OK (game.pas), line = 226
+  2324 				
+  2325 					lda DINODY
+  2326 					sub #$05
+  2327 					svc
+  2328 					eor #$80
+  2329 					jpl l_06BD
+  2330 					lda DINODY
+  2331 					add #$02
+  2332 					sta DINODY
+  2333 				l_06BD
+  2334 				
+  2335 				; optimize OK (game.pas), line = 227
+  2336 				
+  2337 					lda DINOY
+  2338 					add DINODY
+  2339 					sta DINOY
+  2340 				
+  2341 				; optimize OK (game.pas), line = 228
+  2342 				
+  2343 					cmp #$B7
+  2344 					jcc l_06D6
+  2345 				
+  2346 				; optimize OK (game.pas), line = 230
+  2347 				
+  2348 					lda #$03
+  2349 					sta GAMESTATE
+  2350 					lda #$80
+  2351 					sta DINOSTATE
+  2352 				
+  2353 				; optimize OK (game.pas), line = 231
+  2354 				
+  2355 					lda #$00
+  2356 					sta DINOX
+  2357 				l_06D6
+  2358 				l_06AB
+  2359 				
+  2360 				; optimize OK (game.pas), line = 235
+  2361 				
+  2362 					lda DINOX
+  2363 					sub #$2E
+  2364 					sta @SMALLINT.DIV.A
+  2365 					lda #$00
+  2366 					sbc #$00
+  2367 					sta @SMALLINT.DIV.A+1
+  2368 					lda #$04
+  2369 					sta @SMALLINT.DIV.B
+  2370 					lda #$00
+  2371 					sta @SMALLINT.DIV.B+1
+  2372 					jsr @SMALLINT.DIV
+  2373 					lda :eax
+  2374 					sta SX
+  2375 				
+  2376 				; optimize OK (game.pas), line = 236
+  2377 				
+  2378 					lda DINOY
+  2379 					sub #$3C
+  2380 					sta @SMALLINT.DIV.A
+  2381 					lda #$00
+  2382 					sbc #$00
+  2383 					sta @SMALLINT.DIV.A+1
+  2384 					lda #$08
+  2385 					sta @SMALLINT.DIV.B
+  2386 					lda #$00
+  2387 					sta @SMALLINT.DIV.B+1
+  2388 					jsr @SMALLINT.DIV
+  2389 					lda :eax
+  2390 					sta SY
+  2391 				
+  2392 				; optimize OK (game.pas), line = 237
+  2393 				
+  2394 					lda GAMESTATE
+  2395 					cmp #$01
+  2396 					jne l_0713
+  2397 				
+  2398 				; optimize OK (game.pas), line = 239
+  2399 				
+  2400 					lda #$D0
+  2401 					add SX
+  2402 					sta :STACKORIGIN+9
+  2403 					lda #$B8
+  2404 					adc #$00
+  2405 					sta :STACKORIGIN+STACKWIDTH+9
+  2406 					lda SY
+  2407 					jsr @mul40
+  2408 					add :STACKORIGIN+9
+  2409 					sta ADR
+  2410 					lda :eax+1
+  2411 					adc :STACKORIGIN+STACKWIDTH+9
+  2412 					sta ADR+1
+  2413 				
+  2414 				; optimize OK (game.pas), line = 240
+  2415 				
+  2416 					sta :bp+1
+  2417 					ldy ADR
+  2418 					lda (:bp),y
+  2419 					sta CH1
+  2420 					inc ADR
+  2421 					sne
+  2422 					inc ADR+1
+  2423 					ldy ADR+1
+  2424 					sty :bp+1
+  2425 					ldy ADR
+  2426 					lda (:bp),y
+  2427 					sta CH2
+  2428 				
+  2429 				; optimize OK (game.pas), line = 241
+  2430 				
+  2431 					ldy #1
+  2432 					lda CH1
+  2433 					cmp #$2A
+  2434 					bcs @+
+  2435 					dey
+  2436 				@
+  2437 					sty :STACKORIGIN+9
+  2438 				
+  2439 					lda #$2D
+  2440 					cmp CH1
+  2441 					lda #$00
+  2442 					rol @
+  2443 					and :STACKORIGIN+9
+  2444 					sta :STACKORIGIN+9
+  2445 					ldy #1
+  2446 					lda CH2
+  2447 					cmp #$2A
+  2448 					bcs @+
+  2449 					dey
+  2450 				@
+  2451 					sty :STACKORIGIN+10
+  2452 				
+  2453 					lda #$2D
+  2454 					cmp CH2
+  2455 					lda #$00
+  2456 					rol @
+  2457 					and :STACKORIGIN+10
+  2458 					and :STACKORIGIN+9
+  2459 					jeq l_0772
+  2460 				
+  2461 				; optimize OK (game.pas), line = 244
+  2462 				
+  2463 					lda #$02
+  2464 					sta GAMESTATE
+  2465 				
+  2466 				; optimize OK (game.pas), line = 245
+  2467 				
+  2468 					lda #$F8
+  2469 					sta $BFDF
+  2470 					lda #$A8
+  2471 					sta $BFDF+1
+  2472 				
+  2473 				; optimize FAIL ('PMGCLEAR', game.pas), line = 246
+  2474 				
+  2475 					jsr PMGCLEAR
+  2476 				
+  2477 				; optimize OK (game.pas), line = 247
+  2478 				
+  2479 					lda #$04
+  2480 					sta :ecx
+  2481 					sta :ztmp8
+  2482 					lda DINODX
+  2483 					sta :eax
+  2484 					sta :ztmp10
+  2485 					.ifdef fmulinit
+  2486 					fmulu_8
+  2487 					els
+  2488 					imulCL
+  2489 					eif
+  2490 					bit :ztmp10
+  2491 					bpl @+
+  2492 					sub :ztmp8
+  2493 				@
+  2494 					bit :ztmp8
+  2495 					bpl @+
+  2496 					sub :ztmp10
+  2497 				@
+  2498 					sta :eax+1
+  2499 					lda DINOX
+  2500 					add :eax
+  2501 					sta OUTDINOX
+  2502 					lda #$06
+  2503 					sta :ecx
+  2504 					sta :ztmp8
+  2505 					lda DINODY
+  2506 					sta :eax
+  2507 					sta :ztmp10
+  2508 					.ifdef fmulinit
+  2509 					fmulu_8
+  2510 					els
+  2511 					imulCL
+  2512 					eif
+  2513 					bit :ztmp10
+  2514 					bpl @+
+  2515 					sub :ztmp8
+  2516 				@
+  2517 					bit :ztmp8
+  2518 					bpl @+
+  2519 					sub :ztmp10
+  2520 				@
+  2521 					sta :eax+1
+  2522 					lda DINOY
+  2523 					add :eax
+  2524 					sta OUTDINOY
+  2525 				
+  2526 				; optimize OK (game.pas), line = 249
+  2527 				
+  2528 					lda #$44
+  2529 					sta DINOY
+  2530 					lda #$80
+  2531 					sta DINOX
+  2532 				
+  2533 				; optimize OK (game.pas), line = 250
+  2534 				
+  2535 					lda #$00
+  2536 					sta DINODX
+  2537 					lda #$04
+  2538 					sta DINODY
+  2539 				
+  2540 				; optimize OK (game.pas), line = 251
+  2541 				
+  2542 					lda #$11
+  2543 					jsr PLAYSFX
+  2544 				
+  2545 				; optimize OK (game.pas), line = 253
+  2546 				
+  2547 					lda DINOSTATE
+  2548 					and #$79
+  2549 					sta DINOSTATE
+  2550 				
+  2551 				; optimize OK (game.pas), line = 254
+  2552 				
+  2553 					ora #$04
+  2554 					add #$08
+  2555 					sta DINOSTATE
+  2556 				l_0772
+  2557 					jmp l_07D0
+  2558 				l_0713
+  2559 				
+  2560 				; optimize OK (game.pas), line = 257
+  2561 				
+  2562 					lda GAMESTATE
+  2563 					cmp #$02
+  2564 					jne l_07E2
+  2565 				
+  2566 				; optimize OK (game.pas), line = 259
+  2567 				
+  2568 					lda #$F8
+  2569 					add SX
+  2570 					sta :STACKORIGIN+9
+  2571 					lda #$A8
+  2572 					adc #$00
+  2573 					sta :STACKORIGIN+STACKWIDTH+9
+  2574 					lda SY
+  2575 					jsr @mul40
+  2576 					add :STACKORIGIN+9
+  2577 					tay
+  2578 					lda :eax+1
+  2579 					adc :STACKORIGIN+STACKWIDTH+9
+  2580 					sta ADR+1
+  2581 					tya
+  2582 					add #$28
+  2583 					sta ADR
+  2584 					scc
+  2585 					inc ADR+1
+  2586 				
+  2587 				; optimize OK (game.pas), line = 260
+  2588 				
+  2589 					ldy ADR+1
+  2590 					sty :bp+1
+  2591 					ldy ADR
+  2592 					lda (:bp),y
+  2593 					and #$7F
+  2594 					sta CH1
+  2595 				
+  2596 				; optimize FAIL (0, game.pas), line = 261
+  2597 				
+  2598 					inc ADR
+  2599 					sne
+  2600 					inc ADR+1
+  2601 					ldy ADR+1
+  2602 					sty :bp+1
+  2603 					ldy ADR
+  2604 					lda (:bp),y
+  2605 					and #$7F
+  2606 					sta CH2
+  2607 				
+  2608 				; optimize OK (game.pas), line = 262
+  2609 				
+  2610 					lda CH1
+  2611 					cmp #$42
+  2612 					jcc l_082Bs
+  2613 					lda #$44
+  2614 					cmp CH1
+  2615 					jcc l_082Bs
+  2616 					lda:sne #$01
+  2617 				l_082Bs	lda #$00
+  2618 					sta A1
+  2619 				
+  2620 				; optimize OK (game.pas), line = 263
+  2621 				
+  2622 					lda CH2
+  2623 					cmp #$42
+  2624 					jcc l_0843s
+  2625 					lda #$44
+  2626 					cmp CH2
+  2627 					jcc l_0843s
+  2628 					lda:sne #$01
+  2629 				l_0843s	lda #$00
+  2630 					sta A2
+  2631 				
+  2632 				; optimize OK (game.pas), line = 264
+  2633 				
+  2634 					lda A1
+  2635 					jne l_085B
+  2636 					lda A2
+  2637 					jne l_085B
+  2638 				
+  2639 				; optimize OK (game.pas), line = 266
+  2640 				
+  2641 					lda DINOSTATE
+  2642 					and #$7F
+  2643 					ora #$08
+  2644 					sta DINOSTATE
+  2645 					jmp l_0873
+  2646 				l_085B
+  2647 				
+  2648 				; optimize OK (game.pas), line = 270
+  2649 				
+  2650 					lda DINOSTATE
+  2651 					and #$08
+  2652 					jeq l_0889
+  2653 				
+  2654 				; optimize OK (game.pas), line = 272
+  2655 				
+  2656 					lda DINOSTATE
+  2657 					and #$06
+  2658 					ora #$80
+  2659 					sta DINOSTATE
+  2660 				
+  2661 				; optimize OK (game.pas), line = 273
+  2662 				
+  2663 					lda DINOFRM
+  2664 					and #$03
+  2665 					sta DINOFRM
+  2666 				l_0889
+  2667 				
+  2668 				; optimize OK (game.pas), line = 275
+  2669 				
+  2670 					lda #$00
+  2671 					sta :STACKORIGIN+STACKWIDTH+10
+  2672 					lda SY
+  2673 					asl @
+  2674 					rol :STACKORIGIN+STACKWIDTH+10
+  2675 					asl @
+  2676 					asl @
+  2677 					add #$40
+  2678 					sta DINOY
+  2679 					lda #$00
+  2680 					sta DINODY
+  2681 				l_0873
+  2682 				l_07E2
+  2683 				l_07D0
+  2684 				l_0528
+  2685 				l_0514
+  2686 					.ENDM
+  2687
+  2688 				; ------------------------------------------------------------
+  2689
+  2690 = 316D			SPRBASE	= DATAORIGIN+$0055
+  2691 = 316E			SX	= DATAORIGIN+$0056
+  2692 = 316F			SY	= DATAORIGIN+$0057
+  2693 = 3170			ADR	= DATAORIGIN+$0058
+  2694 = 3172			CH1	= DATAORIGIN+$005A
+  2695 = 3173			CH2	= DATAORIGIN+$005B
+  2696 = 3174			CNSL	= DATAORIGIN+$005C
+  2697 = 3175			A1	= DATAORIGIN+$005D
+  2698 = 3176			A2	= DATAORIGIN+$005E
+  2699
+  2700 = 316D			@VarData	= SPRBASE
+  2701 = 000A			@VarDataSize	= 10
+  2702
+  2703 291C			@exit
+  2704 				.endl
+  2705
+  2706 291C			.local	DINOCONTROL					; PROCEDURE
+  2707
+  2708 				; optimize OK (game.pas), line = 284
+  2709
+  2710 291C AD 00 D3			lda STICK
+  2711 291F 29 0F			and #$0F
+  2712 2921 8D 60 31			sta JOYDIR
+  2713
+  2714 				; optimize OK (game.pas), line = 285
+  2715
+  2716 2924 A0 01			ldy #1
+  2717 2926 AD 10 D0			lda adr.STRIG
+  2718 2929 F0 01			beq @+
+  2719 292B 88				dey
+  2720 				@
+  2721 292C 98				tya
+  2722 292D 8D 61 31			sta JOYFIRE
+  2723
+  2724 				; optimize OK (game.pas), line = 287
+  2725
+  2726 2930 AD 45 31			lda GAMESTATE
+  2727 2933 C9 01			cmp #$01
+  2728 2935 D0 28			jne l_08E6
+  2729
+  2730 				; optimize OK (game.pas), line = 289
+  2731
+  2732 2937 AC 60 31			ldy JOYDIR
+  2733 293A B9 2C 20			lda adr.JOY2SPR,y
+  2734 293D C9 FF			cmp #$FF
+  2735 293F F0 1B			jeq l_08FC
+  2736
+  2737 				; optimize OK (game.pas), line = 291
+  2738
+  2739 2941 AD 5E 31			lda DINOSTATE
+  2740 2944 29 79			and #$79
+  2741 2946 85 9D			sta :STACKORIGIN+9
+  2742 2948 B9 2C 20			lda adr.JOY2SPR,y
+  2743 294B 05 9D			ora :STACKORIGIN+9
+  2744 294D 8D 5E 31			sta DINOSTATE
+  2745
+  2746 				; optimize OK (game.pas), line = 292
+  2747
+  2748 2950 B9 3C 20			lda adr.JOY2DX,y
+  2749 2953 8D 4C 31			sta DINODX
+  2750
+  2751 				; optimize OK (game.pas), line = 293
+  2752
+  2753 2956 B9 4C 20			lda adr.JOY2DY,y
+  2754 2959 8D 4D 31			sta DINODY
+  2755 295C			l_08FC
+  2756 295C 4C BC 29			jmp l_092D
+  2757 295F			l_08E6
+  2758
+  2759 				; optimize OK (game.pas), line = 296
+  2760
+  2761 295F AD 45 31			lda GAMESTATE
+  2762 2962 C9 02			cmp #$02
+  2763 2964 D0 56			jne l_093F
+  2764
+  2765 				; optimize OK (game.pas), line = 298
+  2766
+  2767 2966 AD 5E 31			lda DINOSTATE
+  2768 2969 A0 01			ldy #1
+  2769 296B 29 08			and #$08
+  2770 296D F0 01			beq @+
+  2771 296F 88				dey
+  2772 				@
+  2773 2970 98				tya
+  2774 2971 2D 61 31			and JOYFIRE
+  2775 2974 F0 1D			jeq l_095C
+  2776
+  2777 				; optimize OK (game.pas), line = 300
+  2778
+  2779 2976 A9 F8			lda #$F8
+  2780 2978 8D 4D 31			sta DINODY
+  2781
+  2782 				; optimize OK (game.pas), line = 301
+  2783
+  2784 297B AD 5E 31			lda DINOSTATE
+  2785 297E 29 06			and #$06
+  2786 2980 09 10			ora #$10
+  2787 2982 8D 5E 31			sta DINOSTATE
+  2788
+  2789 				; optimize OK (game.pas), line = 302
+  2790
+  2791 2985 AD 61 31			lda JOYFIRE
+  2792 2988 8D 62 31			sta OJOYFIRE
+  2793
+  2794 				; optimize OK (game.pas), line = 303
+  2795
+  2796 298B A9 10			lda #$10
+  2797 298D 20 A8 23			jsr PLAYSFX
+  2798 2990 4C BC 29			jmp @exit
+  2799 2993			l_095C
+  2800
+  2801 				; optimize OK (game.pas), line = 307
+  2802
+  2803 2993 AC 60 31			ldy JOYDIR
+  2804 2996 B9 2C 20			lda adr.JOY2SPR,y
+  2805 2999 C9 FF			cmp #$FF
+  2806 299B F0 1F			jeq l_098E
+  2807
+  2808 				; optimize OK (game.pas), line = 309
+  2809
+  2810 299D AD 5E 31			lda DINOSTATE
+  2811 29A0 29 08			and #$08
+  2812 29A2 D0 0F			jne l_09A5
+  2813
+  2814 				; optimize OK (game.pas), line = 310
+  2815
+  2816 29A4 AD 5E 31			lda DINOSTATE
+  2817 29A7 29 79			and #$79
+  2818 29A9 85 9D			sta :STACKORIGIN+9
+  2819 29AB B9 2C 20			lda adr.JOY2SPR,y
+  2820 29AE 05 9D			ora :STACKORIGIN+9
+  2821 29B0 8D 5E 31			sta DINOSTATE
+  2822 29B3			l_09A5
+  2823
+  2824 				; optimize OK (game.pas), line = 312
+  2825
+  2826 29B3 AC 60 31			ldy JOYDIR
+  2827 29B6 B9 3C 20			lda adr.JOY2DX,y
+  2828 29B9 8D 4C 31			sta DINODX
+  2829 29BC			l_098E
+  2830 29BC			l_093F
+  2831 29BC			l_092D
+  2832
+  2833 29BC			@exit
+  2834 					.ifdef @new
+  2835 					lda <@VarData
+  2836 					sta :ztmp
+  2837 					lda >@VarData
+  2838 					ldy #@VarDataSize-1
+  2839 					jmp @FreeMem
+  2840 					els
+  2841 29BC 60				rts						; ret
+  2842 					eif
+  2843 				.endl
+  2844
+  2845 29BD			.local	PTEROANIM					; PROCEDURE
+  2846
+  2847 				; optimize OK (game.pas), line = 319
+  2848
+  2849 29BD A5 D5			lda adr.TIMER+$01
+  2850 29BF F0 03 4C 19 2B		jne l_09EB
+  2851 29C4 AD 63 31			lda PTEROSTATE
+  2852 29C7 C9 FF			cmp #$FF
+  2853 29C9 D0 03 4C 19 2B		jeq l_09EB
+  2854
+  2855 				; optimize OK (game.pas), line = 321
+  2856
+  2857 29CE A9 07			lda #$07
+  2858 29D0 85 D5			sta adr.TIMER+$01
+  2859
+  2860 				; optimize OK (game.pas), line = 322
+  2861
+  2862 29D2 A9 28			lda #$28
+  2863 29D4 85 9D			sta :STACKORIGIN+9
+  2864 29D6 A0 00			ldy #$00
+  2865 29D8 AD 66 31			lda PTEROX
+  2866 29DB 10 01			spl
+  2867 29DD 88				dey
+  2868 29DE 18 65 9D			add :STACKORIGIN+9
+  2869 29E1 8D 64 31			sta PTEROADR
+  2870 29E4 98				tya
+  2871 29E5 69 B8			adc #$B8
+  2872 29E7 8D 65 31			sta PTEROADR+1
+  2873
+  2874 				; optimize OK (game.pas), line = 323
+  2875
+  2876 29EA AD 63 31			lda PTEROSTATE
+  2877 29ED C9 01			cmp #$01
+  2878 29EF D0 49			jne l_0A11
+  2879
+  2880 				; optimize OK (game.pas), line = 325
+  2881
+  2882 29F1 AC 65 31			ldy PTEROADR+1
+  2883 29F4 84 81			sty :bp+1
+  2884 29F6 AC 64 31			ldy PTEROADR
+  2885 29F9 A9 E0			lda #$E0
+  2886 29FB 91 80			sta (:bp),y
+  2887 29FD EE 64 31			inc PTEROADR
+  2888 2A00 D0 03			sne
+  2889 2A02 EE 65 31			inc PTEROADR+1
+  2890
+  2891 				; optimize OK (game.pas), line = 326
+  2892
+  2893 2A05 AC 65 31			ldy PTEROADR+1
+  2894 2A08 84 81			sty :bp+1
+  2895 2A0A AC 64 31			ldy PTEROADR
+  2896 2A0D A9 E1			lda #$E1
+  2897 2A0F 91 80			sta (:bp),y
+  2898 2A11 EE 64 31			inc PTEROADR
+  2899 2A14 D0 03			sne
+  2900 2A16 EE 65 31			inc PTEROADR+1
+  2901
+  2902 				; optimize OK (game.pas), line = 327
+  2903
+  2904 2A19 AC 65 31			ldy PTEROADR+1
+  2905 2A1C 84 81			sty :bp+1
+  2906 2A1E AC 64 31			ldy PTEROADR
+  2907 2A21 A9 E2			lda #$E2
+  2908 2A23 91 80			sta (:bp),y
+  2909 2A25 EE 64 31			inc PTEROADR
+  2910 2A28 D0 03			sne
+  2911 2A2A EE 65 31			inc PTEROADR+1
+  2912
+  2913 				; optimize OK (game.pas), line = 328
+  2914
+  2915 2A2D AC 65 31			ldy PTEROADR+1
+  2916 2A30 84 81			sty :bp+1
+  2917 2A32 AC 64 31			ldy PTEROADR
+  2918 2A35 A9 E3			lda #$E3
+  2919 				; optimize OK (game.pas), line = 329
+  2920 2A37 4C 80 2A			jmp l_0A3F
+  2921 2A3A			l_0A11
+  2922
+  2923 				; optimize OK (game.pas), line = 333
+  2924
+  2925 2A3A AC 65 31			ldy PTEROADR+1
+  2926 2A3D 84 81			sty :bp+1
+  2927 2A3F AC 64 31			ldy PTEROADR
+  2928 2A42 A9 E4			lda #$E4
+  2929 2A44 91 80			sta (:bp),y
+  2930 2A46 EE 64 31			inc PTEROADR
+  2931 2A49 D0 03			sne
+  2932 2A4B EE 65 31			inc PTEROADR+1
+  2933
+  2934 				; optimize OK (game.pas), line = 334
+  2935
+  2936 2A4E AC 65 31			ldy PTEROADR+1
+  2937 2A51 84 81			sty :bp+1
+  2938 2A53 AC 64 31			ldy PTEROADR
+  2939 2A56 A9 E5			lda #$E5
+  2940 2A58 91 80			sta (:bp),y
+  2941 2A5A EE 64 31			inc PTEROADR
+  2942 2A5D D0 03			sne
+  2943 2A5F EE 65 31			inc PTEROADR+1
+  2944
+  2945 				; optimize OK (game.pas), line = 335
+  2946
+  2947 2A62 AC 65 31			ldy PTEROADR+1
+  2948 2A65 84 81			sty :bp+1
+  2949 2A67 AC 64 31			ldy PTEROADR
+  2950 2A6A A9 E6			lda #$E6
+  2951 2A6C 91 80			sta (:bp),y
+  2952 2A6E EE 64 31			inc PTEROADR
+  2953 2A71 D0 03			sne
+  2954 2A73 EE 65 31			inc PTEROADR+1
+  2955
+  2956 				; optimize OK (game.pas), line = 336
+  2957
+  2958 2A76 AC 65 31			ldy PTEROADR+1
+  2959 2A79 84 81			sty :bp+1
+  2960 2A7B AC 64 31			ldy PTEROADR
+  2961 2A7E A9 E7			lda #$E7
+  2962 2A80			l_0A3F
+  2963 2A80 91 80			sta (:bp),y
+  2964 2A82 EE 64 31			inc PTEROADR
+  2965 2A85 D0 03			sne
+  2966 2A87 EE 65 31			inc PTEROADR+1
+  2967
+  2968 				; optimize OK (game.pas), line = 337
+  2969
+  2970 2A8A AC 65 31			ldy PTEROADR+1
+  2971 2A8D 84 81			sty :bp+1
+  2972 2A8F AC 64 31			ldy PTEROADR
+  2973 2A92 A9 00			lda #$00
+  2974 2A94 91 80			sta (:bp),y
+  2975
+  2976 				; optimize OK (game.pas), line = 339
+  2977
+  2978 2A96 EE 63 31			inc PTEROSTATE
+  2979 2A99 AD 63 31			lda PTEROSTATE
+  2980 2A9C C9 04			cmp #$04
+  2981 2A9E D0 05			jne l_0A76
+  2982 2AA0 A9 01			lda #$01
+  2983 2AA2 8D 63 31			sta PTEROSTATE
+  2984 2AA5			l_0A76
+  2985
+  2986 				; optimize OK (game.pas), line = 340
+  2987
+  2988 2AA5 AD 66 31			lda PTEROX
+  2989 2AA8 30 08			jmi l_0A8F
+  2990 2AAA F0 06			jeq l_0A8F
+  2991
+  2992 				; optimize FAIL (0, game.pas), line = 341
+  2993
+  2994 2AAC CE 66 31			dec PTEROX
+  2995 2AAF 4C 19 2B			jmp l_0A9D
+  2996 2AB2			l_0A8F
+  2997
+  2998 				; optimize OK (game.pas), line = 344
+  2999
+  3000 2AB2 AC 65 31			ldy PTEROADR+1
+  3001 2AB5 84 81			sty :bp+1
+  3002 2AB7 AC 64 31			ldy PTEROADR
+  3003 2ABA A9 00			lda #$00
+  3004 2ABC 91 80			sta (:bp),y
+  3005 2ABE EE 64 31			inc PTEROADR
+  3006 2AC1 D0 03			sne
+  3007 2AC3 EE 65 31			inc PTEROADR+1
+  3008
+  3009 				; optimize OK (game.pas), line = 345
+  3010
+  3011 2AC6 AC 65 31			ldy PTEROADR+1
+  3012 2AC9 84 81			sty :bp+1
+  3013 2ACB AC 64 31			ldy PTEROADR
+  3014 2ACE 91 80			sta (:bp),y
+  3015 2AD0 EE 64 31			inc PTEROADR
+  3016 2AD3 D0 03			sne
+  3017 2AD5 EE 65 31			inc PTEROADR+1
+  3018
+  3019 				; optimize OK (game.pas), line = 346
+  3020
+  3021 2AD8 AC 65 31			ldy PTEROADR+1
+  3022 2ADB 84 81			sty :bp+1
+  3023 2ADD AC 64 31			ldy PTEROADR
+  3024 2AE0 91 80			sta (:bp),y
+  3025 2AE2 EE 64 31			inc PTEROADR
+  3026 2AE5 D0 03			sne
+  3027 2AE7 EE 65 31			inc PTEROADR+1
+  3028
+  3029 				; optimize OK (game.pas), line = 347
+  3030
+  3031 2AEA AC 65 31			ldy PTEROADR+1
+  3032 2AED 84 81			sty :bp+1
+  3033 2AEF AC 64 31			ldy PTEROADR
+  3034 2AF2 91 80			sta (:bp),y
+  3035
+  3036 				; optimize OK (game.pas), line = 348
+  3037
+  3038 2AF4 A9 FF			lda #$FF
+  3039 2AF6 8D 63 31			sta PTEROSTATE
+  3040
+  3041 				; optimize FAIL (2, game.pas), line = 349
+  3042
+  3043 2AF9 E8				inx
+  3044 2AFA A9 02 95 94			mva #$02 :STACKORIGIN,x
+  3045 2AFE A9 00 95 A4			mva #$00 :STACKORIGIN+STACKWIDTH,x
+  3046 2B02 E8				inx
+  3047 2B03 A9 19 95 94			mva #$19 :STACKORIGIN,x
+  3048 2B07 A9 32			lda #$32
+  3049 2B09 20 87 22			jsr SYSTEM.RANDOM.@010180000
+  3050 2B0C B5 94			lda :STACKORIGIN,x
+  3051 2B0E 18 6D 24 31			add SYSTEM.RANDOM.@010180000.RESULT
+  3052 2B12 B4 93			ldy :STACKORIGIN-1,x
+  3053 2B14 99 D4 00			sta adr.TIMER,y
+  3054 2B17 CA				dex
+  3055 2B18 CA				dex
+  3056 2B19			l_0A9D
+  3057 2B19			l_09EB
+  3058
+  3059 2B19			@exit
+  3060 					.ifdef @new
+  3061 					lda <@VarData
+  3062 					sta :ztmp
+  3063 					lda >@VarData
+  3064 					ldy #@VarDataSize-1
+  3065 					jmp @FreeMem
+  3066 					els
+  3067 2B19 60				rts						; ret
+  3068 					eif
+  3069 				.endl
+  3070
+  3071 2B1A			.local	PTEROCONTROL					; PROCEDURE
+  3072
+  3073 				; optimize OK (game.pas), line = 359
+  3074
+  3075 2B1A AD 63 31			lda PTEROSTATE
+  3076 2B1D C9 FF			cmp #$FF
+  3077 2B1F D0 40			jne l_0ADF
+  3078
+  3079 				; optimize OK (game.pas), line = 361
+  3080
+  3081 2B21 A5 D6			lda adr.TIMER+$02
+  3082 2B23 D0 3C			jne l_0AF3
+  3083
+  3084 				; optimize OK (game.pas), line = 363
+  3085
+  3086 2B25 8D 63 31			sta PTEROSTATE
+  3087
+  3088 				; optimize OK (game.pas), line = 364
+  3089
+  3090 2B28 A9 28			lda #$28
+  3091 2B2A 8D 66 31			sta PTEROX
+  3092
+  3093 				; optimize OK (game.pas), line = 365
+  3094
+  3095 2B2D AD 45 31			lda GAMESTATE
+  3096 2B30 C9 01			cmp #$01
+  3097 2B32 D0 28			jne l_0B0E
+  3098
+  3099 				; optimize OK (game.pas), line = 367
+  3100
+  3101 2B34 A9 19			lda #$19
+  3102 2B36 20 87 22			jsr SYSTEM.RANDOM.@010180000
+  3103 2B39 AD 24 31			lda SYSTEM.RANDOM.@010180000.RESULT
+  3104 2B3C 8D 77 31			sta A
+  3105
+  3106 				; optimize OK (game.pas), line = 368
+  3107
+  3108 2B3F 0A				asl @
+  3109 2B40 0A				asl @
+  3110 2B41 85 D7			sta adr.TIMER+$03
+  3111
+  3112 				; optimize FAIL (1, game.pas), line = 369
+  3113
+  3114 2B43 E8				inx
+  3115 2B44 A9 0F 95 94			mva #$0F :STACKORIGIN,x
+  3116 2B48 A9 14			lda #$14
+  3117 2B4A 20 87 22			jsr SYSTEM.RANDOM.@010180000
+  3118 2B4D B5 94			lda :STACKORIGIN,x
+  3119 2B4F 18 6D 24 31			add SYSTEM.RANDOM.@010180000.RESULT
+  3120 2B53 8D 6C 31			sta STONEDST
+  3121 2B56 CA				dex
+  3122
+  3123 				; optimize OK (game.pas), line = 370
+  3124
+  3125 2B57 A9 00			lda #$00
+  3126 2B59 4C 5E 2B			jmp l_0B35
+  3127 2B5C			l_0B0E
+  3128
+  3129 				; optimize OK (game.pas), line = 374
+  3130
+  3131 2B5C A9 FF			lda #$FF
+  3132 2B5E			l_0B35
+  3133 2B5E 8D 67 31			sta STONESTATE
+  3134 2B61			l_0AF3
+  3135 2B61			l_0ADF
+  3136
+  3137 				; ------------------------------------------------------------
+  3138
+  3139 = 3177			A	= DATAORIGIN+$005F
+  3140
+  3141 = 3177			@VarData	= A
+  3142 = 0001			@VarDataSize	= 1
+  3143
+  3144 2B61			@exit
+  3145 					.ifdef @new
+  3146 					lda <@VarData
+  3147 					sta :ztmp
+  3148 					lda >@VarData
+  3149 					ldy #@VarDataSize-1
+  3150 					jmp @FreeMem
+  3151 					els
+  3152 2B61 60				rts						; ret
+  3153 					eif
+  3154 				.endl
+  3155
+  3156 2B62			.local	STONECONTROL					; PROCEDURE
+  3157
+  3158 				; optimize OK (game.pas), line = 382
+  3159
+  3160 2B62 AD 67 31			lda STONESTATE
+  3161 2B65 C9 FF			cmp #$FF
+  3162 2B67 D0 03 4C BC 2C		jeq @exit
+  3163 2B6C			l_0B53
+  3164
+  3165 				; optimize OK (game.pas), line = 383
+  3166
+  3167 2B6C A5 D7			lda adr.TIMER+$03
+  3168 2B6E F0 03			jeq l_0B69
+  3169 2B70 4C BC 2C			jmp @exit
+  3170 2B73			l_0B69
+  3171
+  3172 				; optimize OK (game.pas), line = 385
+  3173
+  3174 2B73 AD 67 31			lda STONESTATE
+  3175 2B76 D0 3A			jne l_0B7E
+  3176
+  3177 				; optimize OK (game.pas), line = 387
+  3178
+  3179 2B78 A9 04			lda #$04
+  3180 2B7A 85 8C			sta :ecx
+  3181 2B7C 85 90			sta :ztmp8
+  3182 2B7E AD 66 31			lda PTEROX
+  3183 2B81 85 84			sta :eax
+  3184 2B83 85 92			sta :ztmp10
+  3185 					.ifdef fmulinit
+  3186 					fmulu_8
+  3187 					els
+  3188 2B85 20 95 20			imulCL
+  3189 					eif
+  3190 2B88 24 92			bit :ztmp10
+  3191 2B8A 10 03			bpl @+
+  3192 2B8C 38 E5 90			sub :ztmp8
+  3193 				@
+  3194 2B8F 24 90			bit :ztmp8
+  3195 2B91 10 03			bpl @+
+  3196 2B93 38 E5 92			sub :ztmp10
+  3197 				@
+  3198 2B96 85 85			sta :eax+1
+  3199 2B98 A9 28			lda #$28
+  3200 2B9A 18 65 84			add :eax
+  3201 2B9D 8D 53 31			sta STONEX
+  3202
+  3203 				; optimize OK (game.pas), line = 388
+  3204
+  3205 2BA0 A9 28			lda #$28
+  3206 2BA2 8D 54 31			sta STONEY
+  3207
+  3208 				; optimize OK (game.pas), line = 389
+  3209
+  3210 2BA5 A9 01			lda #$01
+  3211 2BA7 8D 67 31			sta STONESTATE
+  3212
+  3213 				; optimize OK (game.pas), line = 390
+  3214
+  3215 2BAA A9 15			lda #$15
+  3216 2BAC 20 A8 23			jsr PLAYSFX
+  3217 2BAF 4C BC 2C			jmp l_0BA0
+  3218 2BB2			l_0B7E
+  3219
+  3220 				; optimize FAIL (0, game.pas), line = 394
+  3221
+  3222 2BB2 CE 6C 31			dec STONEDST
+  3223
+  3224 				; optimize OK (game.pas), line = 395
+  3225
+  3226 2BB5 F0 03 4C 88 2C		jne l_0BB6
+  3227
+  3228 				; optimize OK (game.pas), line = 397
+  3229
+  3230 2BBA A9 FF			lda #$FF
+  3231 2BBC 8D 67 31			sta STONESTATE
+  3232
+  3233 				; optimize OK (game.pas), line = 398
+  3234
+  3235 2BBF A9 54			lda #$54
+  3236 2BC1 85 9D			sta :STACKORIGIN+9
+  3237 2BC3 A9 B8			lda #$B8
+  3238 2BC5 85 AD			sta :STACKORIGIN+STACKWIDTH+9
+  3239 2BC7 AD 54 31			lda STONEY
+  3240 2BCA 38 E9 24			sub #$24
+  3241 2BCD 85 84			sta @SMALLINT.DIV.A
+  3242 2BCF A9 00			lda #$00
+  3243 2BD1 E9 00			sbc #$00
+  3244 2BD3 85 85			sta @SMALLINT.DIV.A+1
+  3245 2BD5 A9 08			lda #$08
+  3246 2BD7 85 8C			sta @SMALLINT.DIV.B
+  3247 2BD9 A9 00			lda #$00
+  3248 2BDB 85 8D			sta @SMALLINT.DIV.B+1
+  3249 2BDD 20 78 20			jsr @SMALLINT.DIV
+  3250 2BE0 A9 28			lda #$28
+  3251 2BE2 85 8C			sta :ecx
+  3252 2BE4 A9 00			lda #$00
+  3253 2BE6 85 8D			sta :ecx+1
+  3254 					.ifdef fmulinit
+  3255 					fmulu_16
+  3256 					els
+  3257 2BE8 20 CE 20			imulCX
+  3258 					eif
+  3259 2BEB A5 84			lda :eax
+  3260 2BED 18 65 9D			add :STACKORIGIN+9
+  3261 2BF0 85 9D			sta :STACKORIGIN+9
+  3262 2BF2 A5 85			lda :eax+1
+  3263 2BF4 65 AD			adc :STACKORIGIN+STACKWIDTH+9
+  3264 2BF6 85 AD			sta :STACKORIGIN+STACKWIDTH+9
+  3265 2BF8 AD 53 31			lda STONEX
+  3266 2BFB 38 E9 1C			sub #$1C
+  3267 2BFE 85 84			sta @SMALLINT.DIV.A
+  3268 2C00 A9 00			lda #$00
+  3269 2C02 E9 00			sbc #$00
+  3270 2C04 85 85			sta @SMALLINT.DIV.A+1
+  3271 2C06 A9 04			lda #$04
+  3272 2C08 85 8C			sta @SMALLINT.DIV.B
+  3273 2C0A A9 00			lda #$00
+  3274 2C0C 85 8D			sta @SMALLINT.DIV.B+1
+  3275 2C0E 20 78 20			jsr @SMALLINT.DIV
+  3276 2C11 A5 84			lda :eax
+  3277 2C13 18 65 9D			add :STACKORIGIN+9
+  3278 2C16 8D 68 31			sta STONEADR
+  3279 2C19 A5 85			lda :eax+1
+  3280 2C1B 65 AD			adc :STACKORIGIN+STACKWIDTH+9
+  3281 2C1D 8D 69 31			sta STONEADR+1
+  3282
+  3283 				; optimize OK (game.pas), line = 399
+  3284
+  3285 2C20 AD 68 31			lda STONEADR
+  3286 2C23 38 E9 02			sub #$02
+  3287 2C26 8D 68 31			sta STONEADR
+  3288 2C29 B0 03			scs
+  3289 2C2B CE 69 31			dec STONEADR+1
+  3290
+  3291 				; optimize OK (game.pas), line = 400
+  3292
+  3293 2C2E AC 69 31			ldy STONEADR+1
+  3294 2C31 84 81			sty :bp+1
+  3295 2C33 AC 68 31			ldy STONEADR
+  3296 2C36 A9 2A			lda #$2A
+  3297 2C38 91 80			sta (:bp),y
+  3298 2C3A EE 68 31			inc STONEADR
+  3299 2C3D D0 03			sne
+  3300 2C3F EE 69 31			inc STONEADR+1
+  3301
+  3302 				; optimize OK (game.pas), line = 401
+  3303
+  3304 2C42 AC 69 31			ldy STONEADR+1
+  3305 2C45 84 81			sty :bp+1
+  3306 2C47 AC 68 31			ldy STONEADR
+  3307 2C4A A9 2B			lda #$2B
+  3308 2C4C 91 80			sta (:bp),y
+  3309 2C4E EE 68 31			inc STONEADR
+  3310 2C51 D0 03			sne
+  3311 2C53 EE 69 31			inc STONEADR+1
+  3312
+  3313 				; optimize OK (game.pas), line = 402
+  3314
+  3315 2C56 AC 69 31			ldy STONEADR+1
+  3316 2C59 84 81			sty :bp+1
+  3317 2C5B AC 68 31			ldy STONEADR
+  3318 2C5E A9 2C			lda #$2C
+  3319 2C60 91 80			sta (:bp),y
+  3320 2C62 EE 68 31			inc STONEADR
+  3321 2C65 D0 03			sne
+  3322 2C67 EE 69 31			inc STONEADR+1
+  3323
+  3324 				; optimize OK (game.pas), line = 403
+  3325
+  3326 2C6A AC 69 31			ldy STONEADR+1
+  3327 2C6D 84 81			sty :bp+1
+  3328 2C6F AC 68 31			ldy STONEADR
+  3329 2C72 A9 2D			lda #$2D
+  3330 2C74 91 80			sta (:bp),y
+  3331
+  3332 				; optimize OK (game.pas), line = 404
+  3333
+  3334 2C76 A9 00			lda #$00
+  3335 2C78 8D 53 31			sta STONEX
+  3336 2C7B A9 FF			lda #$FF
+  3337 2C7D 8D 54 31			sta STONEY
+  3338
+  3339 				; optimize OK (game.pas), line = 405
+  3340
+  3341 2C80 A9 12			lda #$12
+  3342 2C82 20 A8 23			jsr PLAYSFX
+  3343 2C85 4C BC 2C			jmp @exit
+  3344 2C88			l_0BB6
+  3345
+  3346 				; optimize OK (game.pas), line = 409
+  3347
+  3348 2C88 AD 68 31			lda STONEADR
+  3349 2C8B 8D 6A 31			sta OSTONEADR
+  3350 2C8E AD 69 31			lda STONEADR+1
+  3351 2C91 8D 6B 31			sta OSTONEADR+1
+  3352
+  3353 				; optimize OK (game.pas), line = 411
+  3354
+  3355 2C94 A9 01			lda #$01
+  3356 2C96 38 ED 58 31			sub STONEFRM
+  3357 2C9A 8D 58 31			sta STONEFRM
+  3358
+  3359 				; optimize OK (game.pas), line = 412
+  3360
+  3361 2C9D A9 01			lda #$01
+  3362 2C9F 18 6D 58 31			add STONEFRM
+  3363 2CA3 8D 67 31			sta STONESTATE
+  3364
+  3365 				; optimize OK (game.pas), line = 414
+  3366
+  3367 2CA6 AD 53 31			lda STONEX
+  3368 2CA9 38 E9 02			sub #$02
+  3369 2CAC 8D 53 31			sta STONEX
+  3370
+  3371 				; optimize OK (game.pas), line = 415
+  3372
+  3373 2CAF AD 54 31			lda STONEY
+  3374 2CB2 18 69 04			add #$04
+  3375 2CB5 8D 54 31			sta STONEY
+  3376
+  3377 				; optimize OK (game.pas), line = 417
+  3378
+  3379 2CB8 A9 04			lda #$04
+  3380 2CBA 85 D7			sta adr.TIMER+$03
+  3381 2CBC			l_0BA0
+  3382
+  3383 2CBC			@exit
+  3384 					.ifdef @new
+  3385 					lda <@VarData
+  3386 					sta :ztmp
+  3387 					lda >@VarData
+  3388 					ldy #@VarDataSize-1
+  3389 					jmp @FreeMem
+  3390 					els
+  3391 2CBC 60				rts						; ret
+  3392 					eif
+  3393 				.endl
+  3394
+  3395 2CBD			.local	OVER_INIT					; PROCEDURE
+  3396
+  3397 				; optimize OK (game.pas), line = 426
+  3398
+  3399 2CBD A9 FF			lda #$FF
+  3400 2CBF 8D FC 02			sta KEYB
+  3401
+  3402 				; optimize FAIL ('PMGCLEAR', game.pas), line = 427
+  3403
+  3404 2CC2 20 FE 25			jsr PMGCLEAR
+  3405
+  3406 				; optimize OK (game.pas), line = 429
+  3407
+  3408 2CC5 A9 80			lda #$80
+  3409 2CC7 8D F1 BF			sta $BFF1
+  3410 2CCA A9 A8			lda #$A8
+  3411 2CCC 8D F2 BF			sta $BFF1+1
+  3412
+  3413 				; optimize OK (game.pas), line = 431
+  3414
+  3415 2CCF A9 00			lda #$00
+  3416 2CD1 8D 78 31			sta I
+  3417
+  3418 2CD4			l_0C4A
+  3419 				; --- ForToDoCondition
+  3420 2CD4 AD 78 31			lda I
+  3421 2CD7 C9 C8			cmp #$C8
+  3422 2CD9 B0 08			jcs l_0C58
+  3423
+  3424 				; optimize FAIL ('WAIT4SCREEN', game.pas), line = 432
+  3425
+  3426 2CDB 20 9D 23			jsr WAIT4SCREEN
+  3427 2CDE EE 78 31			inc I
+  3428 2CE1 D0 F1			jne l_0C4A
+  3429 2CE3			l_0C58
+  3430
+  3431 				; ------------------------------------------------------------
+  3432
+  3433 = 3178			I	= DATAORIGIN+$0060
+  3434
+  3435 = 3178			@VarData	= I
+  3436 = 0001			@VarDataSize	= 1
+  3437
+  3438 2CE3			@exit
+  3439 					.ifdef @new
+  3440 					lda <@VarData
+  3441 					sta :ztmp
+  3442 					lda >@VarData
+  3443 					ldy #@VarDataSize-1
+  3444 					jmp @FreeMem
+  3445 					els
+  3446 2CE3 60				rts						; ret
+  3447 					eif
+  3448 				.endl
+  3449
+  3450 2CE4			.local	GAME_LOOP					; PROCEDURE
+  3451
+  3452 				; optimize OK (game.pas), line = 439
+  3453
+  3454 2CE4 A9 0C			lda #$0C
+  3455 2CE6 8D 29 31			sta RMT.TRMT.INIT.A
+  3456 2CE9 AD 97 30			lda MSX
+  3457 2CEC AC 98 30			ldy MSX+1
+  3458 2CEF 20 CF 22			jsr RMT.TRMT.INIT
+  3459
+  3460 				; --- RepeatUntilProlog
+  3461 2CF2			l_0C65
+  3462
+  3463 				; optimize FAIL ('m@INLINE', game.pas), line = 441
+  3464
+  3465 2CF2				.LOCAL +MAIN.DINOANIM
+  3466 2CF2				m@INLINE
+Macro: MAIN.DINOANIM.M@INLINE [Source: main.a65]
+     4 2CF2 AD 5E 31			lda DINOSTATE
+     5 2CF5 A0 01			ldy #1
+     6 2CF7 29 80			and #$80
+     7 2CF9 F0 01			beq @+
+     8 2CFB 88				dey
+    10 2CFC 84 9D			sty :STACKORIGIN+9
+    11 2CFE A0 01			ldy #1
+    12 2D00 AD 4C 31			lda DINODX
+    13 2D03 F0 01			beq @+
+    14 2D05 88				dey
+    16 2D06 84 9E			sty :STACKORIGIN+10
+    17 2D08 A0 01			ldy #1
+    18 2D0A AD 4D 31			lda DINODY
+    19 2D0D F0 01			beq @+
+    20 2D0F 88				dey
+    22 2D10 98				tya
+    23 2D11 25 9E			and :STACKORIGIN+10
+    24 2D13 25 9D			and :STACKORIGIN+9
+    25 2D15 F0 10			jeq l_04E7
+    29 2D17 AD 5E 31			lda DINOSTATE
+    30 2D1A 09 80			ora #$80
+    31 2D1C 8D 5E 31			sta DINOSTATE
+    35 2D1F AD 4F 31			lda DINOFRM
+    36 2D22 29 02			and #$02
+    37 2D24 8D 4F 31			sta DINOFRM
+    38 2D27			l_04E7
+    42 2D27 AD 5E 31			lda DINOSTATE
+    43 2D2A 10 03 4C 45 30		jmi l_0514
+    47 2D2F A5 D4			lda adr.TIMER
+    48 2D31 F0 03 4C 45 30		jne l_0528
+    52 2D36 A9 03			lda #$03
+    53 2D38 85 D4			sta adr.TIMER
+    57 2D3A AD 5E 31			lda DINOSTATE
+    58 2D3D 29 10			and #$10
+    59 2D3F D0 13			jne l_0544
+    63 2D41 AD 5E 31			lda DINOSTATE
+    64 2D44 29 06			and #$06
+    65 2D46 85 9D			sta :STACKORIGIN+9
+    66 2D48 AD 4F 31			lda DINOFRM
+    67 2D4B 29 01			and #$01
+    68 2D4D 49 01			eor #$01
+    69 2D4F 05 9D			ora :STACKORIGIN+9
+    70 2D51 8D 4F 31			sta DINOFRM
+    71 2D54			l_0544
+    75 2D54 AD 4C 31			lda DINODX
+    76 2D57 F0 24			jeq l_0571
+    80 2D59 A5 56			lda DINOX
+    81 2D5B 18 6D 4C 31			add DINODX
+    82 2D5F 85 56			sta DINOX
+    86 2D61 AD 4C 31			lda DINODX
+    87 2D64 30 08			jmi l_0587
+    88 2D66 F0 06			jeq l_0587
+    92 2D68 CE 4C 31			dec DINODX
+    93 2D6B 4C 71 2D			jmp l_0595
+    94 2D6E			l_0587
+    98 2D6E EE 4C 31			inc DINODX
+    99 2D71			l_0595
+   103 2D71 AD 5E 31			lda DINOSTATE
+   104 2D74 29 18			and #$18
+   105 2D76 D0 05			jne l_05AF
+   109 2D78 A9 14			lda #$14
+   110 2D7A 20 A8 23			jsr PLAYSFX
+   111 2D7D			l_05AF
+   112 2D7D			l_0571
+   116 2D7D AD 5E 31			lda DINOSTATE
+   117 2D80 29 08			and #$08
+   118 2D82 D0 7E			jne l_05CC
+   122 2D84 AD 5E 31			lda DINOSTATE
+   123 2D87 29 10			and #$10
+   124 2D89 D0 2C			jne l_05E3
+   128 2D8B AD 4D 31			lda DINODY
+   129 2D8E F0 24			jeq l_05F6
+   133 2D90 A5 57			lda DINOY
+   134 2D92 18 6D 4D 31			add DINODY
+   135 2D96 85 57			sta DINOY
+   139 2D98 AD 4D 31			lda DINODY
+   140 2D9B 30 08			jmi l_060C
+   141 2D9D F0 06			jeq l_060C
+   145 2D9F CE 4D 31			dec DINODY
+   146 2DA2 4C A8 2D			jmp l_061A
+   147 2DA5			l_060C
+   151 2DA5 EE 4D 31			inc DINODY
+   152 2DA8			l_061A
+   156 2DA8 AD 45 31			lda GAMESTATE
+   157 2DAB C9 01			cmp #$01
+   158 2DAD D0 05			jne l_0630
+   162 2DAF A9 14			lda #$14
+   163 2DB1 20 A8 23			jsr PLAYSFX
+   164 2DB4			l_0630
+   165 2DB4			l_05F6
+   166 2DB4 4C FF 2D			jmp l_0640
+   167 2DB7			l_05E3
+   171 2DB7 AD 4D 31			lda DINODY
+   172 2DBA 10 3B			jpl l_0652
+   176 2DBC A5 57			lda DINOY
+   177 2DBE 18 6D 4D 31			add DINODY
+   178 2DC2 85 57			sta DINOY
+   182 2DC4 EE 4D 31			inc DINODY
+   186 2DC7 C9 40			cmp #$40
+   187 2DC9 D0 29			jne l_066C
+   191 2DCB A9 01			lda #$01
+   192 2DCD 8D 45 31			sta GAMESTATE
+   196 2DD0 A9 D0			lda #$D0
+   197 2DD2 8D DF BF			sta $BFDF
+   198 2DD5 A9 B8			lda #$B8
+   199 2DD7 8D E0 BF			sta $BFDF+1
+   203 2DDA 20 FE 25			jsr PMGCLEAR
+   207 2DDD AD 51 31			lda OUTDINOX
+   208 2DE0 85 56			sta DINOX
+   209 2DE2 AD 52 31			lda OUTDINOY
+   210 2DE5 85 57			sta DINOY
+   214 2DE7 A9 80			lda #$80
+   215 2DE9 8D 5E 31			sta DINOSTATE
+   219 2DEC A9 00			lda #$00
+   220 2DEE 8D 4C 31			sta DINODX
+   221 2DF1 8D 4D 31			sta DINODY
+   222 2DF4			l_066C
+   223 2DF4 4C FF 2D			jmp l_0698
+   224 2DF7			l_0652
+   228 2DF7 AD 5E 31			lda DINOSTATE
+   229 2DFA 29 EF			and #$EF
+   230 2DFC 8D 5E 31			sta DINOSTATE
+   231 2DFF			l_0698
+   232 2DFF			l_0640
+   233 2DFF 4C 31 2E			jmp l_06AB
+   234 2E02			l_05CC
+   238 2E02 AD 4D 31			lda DINODY
+   239 2E05 38 E9 05			sub #$05
+   240 2E08 50 02			svc
+   241 2E0A 49 80			eor #$80
+   242 2E0C 10 09			jpl l_06BD
+   243 2E0E AD 4D 31			lda DINODY
+   244 2E11 18 69 02			add #$02
+   245 2E14 8D 4D 31			sta DINODY
+   246 2E17			l_06BD
+   250 2E17 A5 57			lda DINOY
+   251 2E19 18 6D 4D 31			add DINODY
+   252 2E1D 85 57			sta DINOY
+   256 2E1F C9 B7			cmp #$B7
+   257 2E21 90 0E			jcc l_06D6
+   261 2E23 A9 03			lda #$03
+   262 2E25 8D 45 31			sta GAMESTATE
+   263 2E28 A9 80			lda #$80
+   264 2E2A 8D 5E 31			sta DINOSTATE
+   268 2E2D A9 00			lda #$00
+   269 2E2F 85 56			sta DINOX
+   270 2E31			l_06D6
+   271 2E31			l_06AB
+   275 2E31 A5 56			lda DINOX
+   276 2E33 38 E9 2E			sub #$2E
+   277 2E36 85 84			sta @SMALLINT.DIV.A
+   278 2E38 A9 00			lda #$00
+   279 2E3A E9 00			sbc #$00
+   280 2E3C 85 85			sta @SMALLINT.DIV.A+1
+   281 2E3E A9 04			lda #$04
+   282 2E40 85 8C			sta @SMALLINT.DIV.B
+   283 2E42 A9 00			lda #$00
+   284 2E44 85 8D			sta @SMALLINT.DIV.B+1
+   285 2E46 20 78 20			jsr @SMALLINT.DIV
+   286 2E49 A5 84			lda :eax
+   287 2E4B 8D 6E 31			sta SX
+   291 2E4E A5 57			lda DINOY
+   292 2E50 38 E9 3C			sub #$3C
+   293 2E53 85 84			sta @SMALLINT.DIV.A
+   294 2E55 A9 00			lda #$00
+   295 2E57 E9 00			sbc #$00
+   296 2E59 85 85			sta @SMALLINT.DIV.A+1
+   297 2E5B A9 08			lda #$08
+   298 2E5D 85 8C			sta @SMALLINT.DIV.B
+   299 2E5F A9 00			lda #$00
+   300 2E61 85 8D			sta @SMALLINT.DIV.B+1
+   301 2E63 20 78 20			jsr @SMALLINT.DIV
+   302 2E66 A5 84			lda :eax
+   303 2E68 8D 6F 31			sta SY
+   307 2E6B AD 45 31			lda GAMESTATE
+   308 2E6E C9 01			cmp #$01
+   309 2E70 F0 03 4C 76 2F		jne l_0713
+   313 2E75 A9 D0			lda #$D0
+   314 2E77 18 6D 6E 31			add SX
+   315 2E7B 85 9D			sta :STACKORIGIN+9
+   316 2E7D A9 B8			lda #$B8
+   317 2E7F 69 00			adc #$00
+   318 2E81 85 AD			sta :STACKORIGIN+STACKWIDTH+9
+   319 2E83 AD 6F 31			lda SY
+   320 2E86 20 99 21			jsr @mul40
+   321 2E89 18 65 9D			add :STACKORIGIN+9
+   322 2E8C 8D 70 31			sta ADR
+   323 2E8F A5 85			lda :eax+1
+   324 2E91 65 AD			adc :STACKORIGIN+STACKWIDTH+9
+   325 2E93 8D 71 31			sta ADR+1
+   329 2E96 85 81			sta :bp+1
+   330 2E98 AC 70 31			ldy ADR
+   331 2E9B B1 80			lda (:bp),y
+   332 2E9D 8D 72 31			sta CH1
+   333 2EA0 EE 70 31			inc ADR
+   334 2EA3 D0 03			sne
+   335 2EA5 EE 71 31			inc ADR+1
+   336 2EA8 AC 71 31			ldy ADR+1
+   337 2EAB 84 81			sty :bp+1
+   338 2EAD AC 70 31			ldy ADR
+   339 2EB0 B1 80			lda (:bp),y
+   340 2EB2 8D 73 31			sta CH2
+   344 2EB5 A0 01			ldy #1
+   345 2EB7 AD 72 31			lda CH1
+   346 2EBA C9 2A			cmp #$2A
+   347 2EBC B0 01			bcs @+
+   348 2EBE 88				dey
+   350 2EBF 84 9D			sty :STACKORIGIN+9
+   352 2EC1 A9 2D			lda #$2D
+   353 2EC3 CD 72 31			cmp CH1
+   354 2EC6 A9 00			lda #$00
+   355 2EC8 2A				rol @
+   356 2EC9 25 9D			and :STACKORIGIN+9
+   357 2ECB 85 9D			sta :STACKORIGIN+9
+   358 2ECD A0 01			ldy #1
+   359 2ECF AD 73 31			lda CH2
+   360 2ED2 C9 2A			cmp #$2A
+   361 2ED4 B0 01			bcs @+
+   362 2ED6 88				dey
+   364 2ED7 84 9E			sty :STACKORIGIN+10
+   366 2ED9 A9 2D			lda #$2D
+   367 2EDB CD 73 31			cmp CH2
+   368 2EDE A9 00			lda #$00
+   369 2EE0 2A				rol @
+   370 2EE1 25 9E			and :STACKORIGIN+10
+   371 2EE3 25 9D			and :STACKORIGIN+9
+   372 2EE5 D0 03 4C 73 2F		jeq l_0772
+   376 2EEA A9 02			lda #$02
+   377 2EEC 8D 45 31			sta GAMESTATE
+   381 2EEF A9 F8			lda #$F8
+   382 2EF1 8D DF BF			sta $BFDF
+   383 2EF4 A9 A8			lda #$A8
+   384 2EF6 8D E0 BF			sta $BFDF+1
+   388 2EF9 20 FE 25			jsr PMGCLEAR
+   392 2EFC A9 04			lda #$04
+   393 2EFE 85 8C			sta :ecx
+   394 2F00 85 90			sta :ztmp8
+   395 2F02 AD 4C 31			lda DINODX
+   396 2F05 85 84			sta :eax
+   397 2F07 85 92			sta :ztmp10
+   401 2F09 20 95 20			imulCL
+   403 2F0C 24 92			bit :ztmp10
+   404 2F0E 10 03			bpl @+
+   405 2F10 38 E5 90			sub :ztmp8
+   407 2F13 24 90			bit :ztmp8
+   408 2F15 10 03			bpl @+
+   409 2F17 38 E5 92			sub :ztmp10
+   411 2F1A 85 85			sta :eax+1
+   412 2F1C A5 56			lda DINOX
+   413 2F1E 18 65 84			add :eax
+   414 2F21 8D 51 31			sta OUTDINOX
+   415 2F24 A9 06			lda #$06
+   416 2F26 85 8C			sta :ecx
+   417 2F28 85 90			sta :ztmp8
+   418 2F2A AD 4D 31			lda DINODY
+   419 2F2D 85 84			sta :eax
+   420 2F2F 85 92			sta :ztmp10
+   424 2F31 20 95 20			imulCL
+   426 2F34 24 92			bit :ztmp10
+   427 2F36 10 03			bpl @+
+   428 2F38 38 E5 90			sub :ztmp8
+   430 2F3B 24 90			bit :ztmp8
+   431 2F3D 10 03			bpl @+
+   432 2F3F 38 E5 92			sub :ztmp10
+   434 2F42 85 85			sta :eax+1
+   435 2F44 A5 57			lda DINOY
+   436 2F46 18 65 84			add :eax
+   437 2F49 8D 52 31			sta OUTDINOY
+   441 2F4C A9 44			lda #$44
+   442 2F4E 85 57			sta DINOY
+   443 2F50 A9 80			lda #$80
+   444 2F52 85 56			sta DINOX
+   448 2F54 A9 00			lda #$00
+   449 2F56 8D 4C 31			sta DINODX
+   450 2F59 A9 04			lda #$04
+   451 2F5B 8D 4D 31			sta DINODY
+   455 2F5E A9 11			lda #$11
+   456 2F60 20 A8 23			jsr PLAYSFX
+   460 2F63 AD 5E 31			lda DINOSTATE
+   461 2F66 29 79			and #$79
+   462 2F68 8D 5E 31			sta DINOSTATE
+   466 2F6B 09 04			ora #$04
+   467 2F6D 18 69 08			add #$08
+   468 2F70 8D 5E 31			sta DINOSTATE
+   469 2F73			l_0772
+   470 2F73 4C 45 30			jmp l_07D0
+   471 2F76			l_0713
+   475 2F76 AD 45 31			lda GAMESTATE
+   476 2F79 C9 02			cmp #$02
+   477 2F7B F0 03 4C 45 30		jne l_07E2
+   481 2F80 A9 F8			lda #$F8
+   482 2F82 18 6D 6E 31			add SX
+   483 2F86 85 9D			sta :STACKORIGIN+9
+   484 2F88 A9 A8			lda #$A8
+   485 2F8A 69 00			adc #$00
+   486 2F8C 85 AD			sta :STACKORIGIN+STACKWIDTH+9
+   487 2F8E AD 6F 31			lda SY
+   488 2F91 20 99 21			jsr @mul40
+   489 2F94 18 65 9D			add :STACKORIGIN+9
+   490 2F97 A8				tay
+   491 2F98 A5 85			lda :eax+1
+   492 2F9A 65 AD			adc :STACKORIGIN+STACKWIDTH+9
+   493 2F9C 8D 71 31			sta ADR+1
+   494 2F9F 98				tya
+   495 2FA0 18 69 28			add #$28
+   496 2FA3 8D 70 31			sta ADR
+   497 2FA6 90 03			scc
+   498 2FA8 EE 71 31			inc ADR+1
+   502 2FAB AC 71 31			ldy ADR+1
+   503 2FAE 84 81			sty :bp+1
+   504 2FB0 AC 70 31			ldy ADR
+   505 2FB3 B1 80			lda (:bp),y
+   506 2FB5 29 7F			and #$7F
+   507 2FB7 8D 72 31			sta CH1
+   511 2FBA EE 70 31			inc ADR
+   512 2FBD D0 03			sne
+   513 2FBF EE 71 31			inc ADR+1
+   514 2FC2 AC 71 31			ldy ADR+1
+   515 2FC5 84 81			sty :bp+1
+   516 2FC7 AC 70 31			ldy ADR
+   517 2FCA B1 80			lda (:bp),y
+   518 2FCC 29 7F			and #$7F
+   519 2FCE 8D 73 31			sta CH2
+   523 2FD1 AD 72 31			lda CH1
+   524 2FD4 C9 42			cmp #$42
+   525 2FD6 90 0B			jcc l_082Bs
+   526 2FD8 A9 44			lda #$44
+   527 2FDA CD 72 31			cmp CH1
+   528 2FDD 90 04			jcc l_082Bs
+   529 2FDF A9 01 D0 02			lda:sne #$01
+   530 2FE3 A9 00		l_082Bs	lda #$00
+   531 2FE5 8D 75 31			sta A1
+   535 2FE8 AD 73 31			lda CH2
+   536 2FEB C9 42			cmp #$42
+   537 2FED 90 0B			jcc l_0843s
+   538 2FEF A9 44			lda #$44
+   539 2FF1 CD 73 31			cmp CH2
+   540 2FF4 90 04			jcc l_0843s
+   541 2FF6 A9 01 D0 02			lda:sne #$01
+   542 2FFA A9 00		l_0843s	lda #$00
+   543 2FFC 8D 76 31			sta A2
+   547 2FFF AD 75 31			lda A1
+   548 3002 D0 12			jne l_085B
+   549 3004 AD 76 31			lda A2
+   550 3007 D0 0D			jne l_085B
+   554 3009 AD 5E 31			lda DINOSTATE
+   555 300C 29 7F			and #$7F
+   556 300E 09 08			ora #$08
+   557 3010 8D 5E 31			sta DINOSTATE
+   558 3013 4C 45 30			jmp l_0873
+   559 3016			l_085B
+   563 3016 AD 5E 31			lda DINOSTATE
+   564 3019 29 08			and #$08
+   565 301B F0 12			jeq l_0889
+   569 301D AD 5E 31			lda DINOSTATE
+   570 3020 29 06			and #$06
+   571 3022 09 80			ora #$80
+   572 3024 8D 5E 31			sta DINOSTATE
+   576 3027 AD 4F 31			lda DINOFRM
+   577 302A 29 03			and #$03
+   578 302C 8D 4F 31			sta DINOFRM
+   579 302F			l_0889
+   583 302F A9 00			lda #$00
+   584 3031 85 AE			sta :STACKORIGIN+STACKWIDTH+10
+   585 3033 AD 6F 31			lda SY
+   586 3036 0A				asl @
+   587 3037 26 AE			rol :STACKORIGIN+STACKWIDTH+10
+   588 3039 0A				asl @
+   589 303A 0A				asl @
+   590 303B 18 69 40			add #$40
+   591 303E 85 57			sta DINOY
+   592 3040 A9 00			lda #$00
+   593 3042 8D 4D 31			sta DINODY
+   594 3045			l_0873
+   595 3045			l_07E2
+   596 3045			l_07D0
+   597 3045			l_0528
+   598 3045			l_0514
+  3467 					.ENDL
+  3468
+  3469 				; optimize FAIL ('PTEROANIM', game.pas), line = 442
+  3470
+  3471 3045 20 BD 29			jsr PTEROANIM
+  3472
+  3473 				; optimize FAIL ('DINOCONTROL', game.pas), line = 443
+  3474
+  3475 3048 20 1C 29			jsr DINOCONTROL
+  3476
+  3477 				; optimize FAIL ('PTEROCONTROL', game.pas), line = 444
+  3478
+  3479 304B 20 1A 2B			jsr PTEROCONTROL
+  3480
+  3481 				; optimize FAIL ('STONECONTROL', game.pas), line = 445
+  3482
+  3483 304E 20 62 2B			jsr STONECONTROL
+  3484
+  3485 				; optimize OK (game.pas), line = 446
+  3486
+  3487 3051 AD FC 02			lda KEYB
+  3488 3054 C9 FF			cmp #$FF
+  3489 3056 F0 05			jeq l_0C7C
+  3490 3058 A9 03			lda #$03
+  3491 305A 8D 45 31			sta GAMESTATE
+  3492 305D			l_0C7C
+  3493
+  3494 				; optimize OK (game.pas), line = 447
+  3495
+  3496 305D AD 45 31			lda GAMESTATE
+  3497 3060 C9 03			cmp #$03
+  3498 3062 F0 03 4C F2 2C		jne l_0C65
+  3499
+  3500 				; optimize FAIL ('OVER_INIT', game.pas), line = 449
+  3501
+  3502 3067 20 BD 2C			jsr OVER_INIT
+  3503
+  3504 306A			@exit
+  3505 					.ifdef @new
+  3506 					lda <@VarData
+  3507 					sta :ztmp
+  3508 					lda >@VarData
+  3509 					ldy #@VarDataSize-1
+  3510 					jmp @FreeMem
+  3511 					els
+  3512 306A 60				rts						; ret
+  3513 					eif
+  3514 				.endl
+  3515 306B			l_0004
+  3516
+  3517 				; optimize OK (main.pas), line = 60
+  3518
+  3519 306B A9 00			lda #$00
+  3520 306D 8D 41 31			sta MSX.PLAYER
+  3521 3070 A9 8C			lda #$8C
+  3522 3072 8D 42 31			sta MSX.PLAYER+1
+  3523
+  3524 				; optimize OK (main.pas), line = 61
+  3525
+  3526 3075 A9 00			lda #$00
+  3527 3077 8D 43 31			sta MSX.MODUL
+  3528 307A A9 C0			lda #$C0
+  3529 307C 8D 44 31			sta MSX.MODUL+1
+  3530
+  3531 				; --- RepeatUntilProlog
+  3532 307F			l_0C9B
+  3533
+  3534 				; optimize FAIL ('INIT_TITLE', main.pas), line = 65
+  3535
+  3536 307F 20 D7 26			jsr INIT_TITLE
+  3537
+  3538 				; optimize FAIL ('TITLE_LOOP', main.pas), line = 66
+  3539
+  3540 3082 20 2A 27			jsr TITLE_LOOP
+  3541
+  3542 				; optimize FAIL ('INIT_GAME', main.pas), line = 68
+  3543
+  3544 3085 20 5D 28			jsr INIT_GAME
+  3545
+  3546 				; optimize FAIL ('GAME_LOOP', main.pas), line = 69
+  3547
+  3548 3088 20 E4 2C			jsr GAME_LOOP
+  3549
+  3550 				; optimize OK (main.pas), line = 71
+  3551
+  3552 308B 4C 7F 30			jmp l_0C9B
+  3553
+  3554 				; ------------------------------------------------------------
+  3555
+  3556 = 9000			FNT_TITLE	= $9000
+  3557 = 9800			SCR_TITLE	= $9800
+  3558 = 8C00			RMT_PLAYER	= $8C00
+  3559 = A400			FNT_STATUS	= $A400
+  3560 = A800			STATUS_ADDR	= $A800
+  3561 = A880			GOVER_ADDR	= $A880
+  3562 = A8F8			CRATER_ADDR	= $A8F8
+  3563 = AC00			FNT_GAME	= $AC00
+  3564 = B000			PMG_ADDR	= $B000
+  3565 = B000			SPR_ADDR	= $B000
+  3566 = B800			SCREEN_ADDR	= $B800
+  3567 = BF90			DL_TITLE	= $BF90
+  3568 = BFD0			DL_GAME	= $BFD0
+  3569 = C000			RMT_MODUL	= $C000
+  3570 = 0050			PTR1	= $50
+  3571 = 0052			PTR2	= $52
+  3572 = 0054			PTR3	= $54
+  3573 = 3141			adr.MSX	= DATAORIGIN+$0029	; [4] OBJECT
+  3574 308E			.var MSX	= adr.MSX .word
+  3575 = 3141			MSX.PLAYER	= DATAORIGIN+$0029
+  3576 = 3143			MSX.MODUL	= DATAORIGIN+$002B
+  3577 = 0200			VDSLST	= $0200
+  3578 = 0230			DL	= $0230
+  3579 = D300			STICK	= $D300
+  3580 = D010			adr.STRIG	= $D010
+  3581 308E			.var STRIG	= adr.STRIG .word
+  3582 = 02C4			adr.FCOL	= $02C4
+  3583 308E			.var FCOL	= adr.FCOL .word
+  3584 = 02FC			KEYB	= $02FC
+  3585 = 02F4			CHBAS	= $02F4
+  3586 = D016			COLPF0	= $D016
+  3587 = D017			COLPF1	= $D017
+  3588 = D018			COLPF2	= $D018
+  3589 = D019			COLPF3	= $D019
+  3590 = D01A			COLBK	= $D01A
+  3591 = D20A			RAND	= $D20A
+  3592 = D40E			IRQST	= $D40E
+  3593 = D409			CHBASE	= $D409
+  3594 = D40A			WSYNC	= $D40A
+  3595 = 00D4			adr.TIMER	= $D4
+  3596 308E			.var TIMER	= adr.TIMER .word
+  3597 = 3145			GAMESTATE	= DATAORIGIN+$002D
+  3598 = 2000			adr.DINOP0	= CODEORIGIN+$0000
+  3599 308E			.var DINOP0	= adr.DINOP0 .word
+  3600 = 2014			adr.DINOP1	= CODEORIGIN+$0014
+  3601 308E			.var DINOP1	= adr.DINOP1 .word
+  3602 = 2028			adr.STONEP2	= CODEORIGIN+$0028
+  3603 308E			.var STONEP2	= adr.STONEP2 .word
+  3604 = 02C0			adr.PCOLR	= $02C0
+  3605 308E			.var PCOLR	= adr.PCOLR .word
+  3606 = 022F			SDMCTL	= $022F
+  3607 = 026F			GPRIO	= $026F
+  3608 = D008			adr.SIZEP	= $D008
+  3609 308E			.var SIZEP	= adr.SIZEP .word
+  3610 = D000			adr.HPOSP	= $D000
+  3611 308E			.var HPOSP	= adr.HPOSP .word
+  3612 = D004			adr.HPOSM	= $D004
+  3613 308E			.var HPOSM	= adr.HPOSM .word
+  3614 = D00C			SIZEM	= $D00C
+  3615 = D407			PMBASE	= $D407
+  3616 = D01D			PMCNTL	= $D01D
+  3617 = B400			adr._PL0	= $B400
+  3618 308E			.var _PL0	= adr._PL0 .word
+  3619 = B500			adr._PL1	= $B500
+  3620 308E			.var _PL1	= adr._PL1 .word
+  3621 = B600			adr._PL2	= $B600
+  3622 308E			.var _PL2	= adr._PL2 .word
+  3623 = 0056			DINOX	= $56
+  3624 = 0057			DINOY	= $57
+  3625 = 314C			DINODX	= DATAORIGIN+$0034
+  3626 = 314D			DINODY	= DATAORIGIN+$0035
+  3627 = 314E			ODINOY	= DATAORIGIN+$0036
+  3628 = 314F			DINOFRM	= DATAORIGIN+$0037
+  3629 = 3150			ODINOFRM	= DATAORIGIN+$0038
+  3630 = 3151			OUTDINOX	= DATAORIGIN+$0039
+  3631 = 3152			OUTDINOY	= DATAORIGIN+$003A
+  3632 = 3153			STONEX	= DATAORIGIN+$003B
+  3633 = 3154			STONEY	= DATAORIGIN+$003C
+  3634 = 3155			STONEDX	= DATAORIGIN+$003D
+  3635 = 3156			STONEDY	= DATAORIGIN+$003E
+  3636 = 3157			OSTONEY	= DATAORIGIN+$003F
+  3637 = 3158			STONEFRM	= DATAORIGIN+$0040
+  3638 = 3159			OSTONEFRM	= DATAORIGIN+$0041
+  3639 = 0080			DSNONE	= $80
+  3640 = 0000			DSWALKLEFT	= $00
+  3641 = 0002			DSWALKRIGHT	= $02
+  3642 = 0004			DSWALKUP	= $04
+  3643 = 0006			DSWALKDOWN	= $06
+  3644 = 0006			DSWALK	= $06
+  3645 = 0008			DSFALL	= $08
+  3646 = 0010			DSJUMP	= $10
+  3647 = 0000			TMDINOANIM	= $00
+  3648 = 0001			TMPTEROANIM	= $01
+  3649 = 0002			TMPTERODLY	= $02
+  3650 = 0003			TMPTEROSHT	= $03
+  3651 = 0014			SFXDINOSTEP	= $14
+  3652 = 0011			SFXDINOFALL	= $11
+  3653 = 0010			SFXDINOJUMP	= $10
+  3654 = 0015			SFXPTERODROP	= $15
+  3655 = 0012			SFXSTONEHIT	= $12
+  3656 = 202C			adr.JOY2SPR	= CODEORIGIN+$002C
+  3657 308E			.var JOY2SPR	= adr.JOY2SPR .word
+  3658 = 203C			adr.JOY2DX	= CODEORIGIN+$003C
+  3659 308E			.var JOY2DX	= adr.JOY2DX .word
+  3660 = 204C			adr.JOY2DY	= CODEORIGIN+$004C
+  3661 308E			.var JOY2DY	= adr.JOY2DY .word
+  3662 = 315E			DINOSTATE	= DATAORIGIN+$0046
+  3663 = 315F			DINOLASTDIR	= DATAORIGIN+$0047
+  3664 = 3160			JOYDIR	= DATAORIGIN+$0048
+  3665 = 3161			JOYFIRE	= DATAORIGIN+$0049
+  3666 = 3162			OJOYFIRE	= DATAORIGIN+$004A
+  3667 = 3163			PTEROSTATE	= DATAORIGIN+$004B
+  3668 = 3164			PTEROADR	= DATAORIGIN+$004C
+  3669 = 3166			PTEROX	= DATAORIGIN+$004E
+  3670 = 3167			STONESTATE	= DATAORIGIN+$004F
+  3671 = 3168			STONEADR	= DATAORIGIN+$0050
+  3672 = 316A			OSTONEADR	= DATAORIGIN+$0052
+  3673 = 316C			STONEDST	= DATAORIGIN+$0054
+  3674 308E			@exit
+  3675
+  3676 308E A2 00		@halt	ldx #$00
+  3677 3090 9A				txs
+  3678
+  3679 					.ifdef MAIN.@DEFINES.ROMOFF
+  3680 3091 EE 01 D3			inc portb
+  3681 					.fi
+  3682
+  3683 3094 A0 01			ldy #$01
+  3684
+  3685 3096 60				rts
+  3686
+  3687 				; ------------------------------------------------------------
+  3688
+  3689 3097			.local	@DEFINES
+  3690 3097			ATARI
+  3691 3097			CPU_6502
+  3692 3097			BASICOFF
+  3693 3097			ROMOFF
+  3694 3097			NOROMFONT
+  3695 				.endl
+  3696
+  3697 3097			.local	@RESOURCE
+  3698 				.endl
+  3699
+  3700 = 3097 41 31		MSX
+  3700 = 3099 10 D0		STRIG
+  3700 = 309B C4 02		FCOL
+  3700 = 309D D4 00		TIMER
+  3700 = 309F 00 20		DINOP0
+  3700 = 30A1 14 20		DINOP1
+  3700 = 30A3 28 20		STONEP2
+  3700 = 30A5 C0 02		PCOLR
+  3700 = 30A7 08 D0		SIZEP
+  3700 = 30A9 00 D0		HPOSP
+  3700 = 30AB 04 D0		HPOSM
+  3700 = 30AD 00 B4		_PL0
+  3700 = 30AF 00 B5		_PL1
+  3700 = 30B1 00 B6		_PL2
+  3700 = 30B3 2C 20		JOY2SPR
+  3700 = 30B5 3C 20		JOY2DX
+  3700 = 30B7 4C 20		JOY2DY
+  3700 				.endl							; MAIN
+  3701
+  3702 				; ------------------------------------------------------------
+  3703 				; ------------------------------------------------------------
+  3704
+  3705 				.macro	UNITINITIALIZATION
+  3706 				
+  3707 					.ifdef MAIN.SYSTEM.@UnitInit
+  3708 					jsr MAIN.SYSTEM.@UnitInit
+  3709 					.fi
+  3710 				
+  3711 					.ifdef MAIN.ATARI.@UnitInit
+  3712 					jsr MAIN.ATARI.@UnitInit
+  3713 					.fi
+  3714 				
+  3715 					.ifdef MAIN.MISC.@UnitInit
+  3716 					jsr MAIN.MISC.@UnitInit
+  3717 					.fi
+  3718 				
+  3719 					.ifdef MAIN.RMT.@UnitInit
+  3720 					jsr MAIN.RMT.@UnitInit
+  3721 					.fi
+  3722 				.endm
+  3723
+  3724 				; ------------------------------------------------------------
+  3725
+  3726 					ift .SIZEOF(MAIN.SYSTEM) > 0
+  3727 					.print 'SYSTEM: ',MAIN.SYSTEM,'..',MAIN.SYSTEM+.SIZEOF(MAIN.SYSTEM)-1
+  3727 				SYSTEM: $223B..$22A4
+  3728 					eif
+  3729
+  3730 					ift .SIZEOF(MAIN.ATARI) > 0
+  3731 					.print 'ATARI: ',MAIN.ATARI,'..',MAIN.ATARI+.SIZEOF(MAIN.ATARI)-1
+  3732 					eif
+  3733
+  3734 					ift .SIZEOF(MAIN.MISC) > 0
+  3735 					.print 'MISC: ',MAIN.MISC,'..',MAIN.MISC+.SIZEOF(MAIN.MISC)-1
+  3735 				MISC: $22A5..$22CE
+  3736 					eif
+  3737
+  3738 					ift .SIZEOF(MAIN.RMT) > 0
+  3739 					.print 'RMT: ',MAIN.RMT,'..',MAIN.RMT+.SIZEOF(MAIN.RMT)-1
+  3739 				RMT: $22CF..$239C
+  3740 					eif
+  3741
+  3742 				.nowarn	.print 'CODE: ',CODEORIGIN,'..',MAIN.@RESOURCE-1
+  3742 				CODE: $2000..$3096
+  3743
+  3744 					ift .SIZEOF(MAIN.@RESOURCE)>0
+  3745 				.nowarn	.print 'RESOURCE: ',MAIN.@RESOURCE,'..',MAIN.@RESOURCE+.SIZEOF(MAIN.@RESOURCE)-1
+  3746 					eif
+  3747
+  3748 30B9			@end
+  3749
+  3750 				.nowarn	.print 'VARS: ',MAIN.@RESOURCE+.SIZEOF(MAIN.@RESOURCE),'..',@end-1
+  3750 				VARS: $3097..$30B8
+  3751
+  3752 				; ------------------------------------------------------------
+  3753
+  3754 = 30B9				?adr = *
+  3755 					ift (?adr < ?old_adr) && (?old_adr - ?adr < $120)
+  3756 = 3118				?adr = ?old_adr
+  3757 					eif
+  3758
+  3759 					org ?adr
+  3760 = 3118				?old_adr = *
+  3761
+  3762 3118			DATAORIGIN
+  3763 3118-311F> 2D 0C 00 00 + .by  $2D $0C $00 $00 $00 $28 $00 $18
+  3764
+  3765 = 0008			VARINITSIZE	= *-DATAORIGIN
+  3766 = 0061			VARDATASIZE	= 97
+  3767
+  3768 = 3179			PROGRAMSTACK	= DATAORIGIN+VARDATASIZE
+  3769
+  3770 					.print 'DATA: ',DATAORIGIN,'..',PROGRAMSTACK
+  3770 				DATA: $3118..$3179
+  3771
+  3772 					ert DATAORIGIN<@end,'DATA memory overlap'
+  3773
+  3774 02E0-02E1> BE 21			run START
+  3775
+  3776 				; ------------------------------------------------------------
+  3777
+  3778 				.macro	STATICDATA
+  3779 				.by  $00 $B0 $10 $B0 $20 $B0 $30 $B0  $40 $B0 $50 $B0 $60 $B0 $70 $B0  $80 $B0 $90 $B0 $A0 $B0 $B0 $B0
+  3780 				.by  $C0 $B0 $D0 $B0 $E0 $B0 $F0 $B0  $00 $B1 $10 $B1 $20 $B1 $30 $B1  $40 $B1 $50 $B1 $FF $FF $FF $FF
+  3781 				.by  $FF $FF $FF $00 $FF $FF $FF $02  $FF $06 $04 $FF $00 $00 $00 $00  $00 $00 $00 $02 $00 $00 $00 $FE
+  3782 				.by  $00 $00 $00 $00 $00 $00 $00 $00  $00 $00 $00 $00 $00 $00 $00 $00  $00 $04 $FC $00
+  3783 				.endm
+  3784
+  3785 					end

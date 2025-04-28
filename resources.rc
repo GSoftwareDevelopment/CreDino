@@ -1,0 +1,18 @@
+RMT_PLAYER  RMTPLAY 'music.feat' 0
+
+FNT_TITLE   rcdata  'assets/title.fnt'
+SCR_TITLE   rcdata  'assets/title.scr'
+
+FNT_STATUS  rcdata  'assets/status.fnt'
+STATUS_ADDR rcdata  'assets/status.dat'
+
+FNT_GAME    rcdata  'assets/game.fnt'
+
+GOVER_ADDR  rcdata  'assets/gameover.dat'
+CRATER_ADDR rcdata  'assets/crater.dat'
+
+SPR_ADDR    rcasm   'assets/sprites.a65'
+DL_TITLE    rcasm   'dl_title.a65'
+DL_GAME     rcasm   'dl_game.a65'
+
+RMT_MODUL   RMT     'assets/music.rmt'
