@@ -4,7 +4,7 @@ begin
     xitvbl      = $e462
     sysvbv      = $e45c
     portb       = $d301
-    atract      = $77
+    atract      = 77
 
       phr
 
