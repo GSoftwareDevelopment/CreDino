@@ -196,7 +196,7 @@ begin
           dec(DINODX)
         else
           inc(DINODX);
-        if DINOState and (dsJUMP+dsFall)=0 then
+        if (DINOState and (dsJUMP+dsFall)=0) and ((DINOFrm and 1)=0) then
           PlaySFX(sfxDINOSTEP);
       end;
 
@@ -209,7 +209,7 @@ begin
             dec(DINODY)
           else
             inc(DINODY);
-          if gameState=1 then
+          if (gameState=1) and (DINOFrm and 1=0) then
             PlaySFX(sfxDINOSTEP);
         end;
       end
@@ -255,7 +255,7 @@ begin
       end;
 
       sx:=(DINOX-46) div 4;
-      sy:=(DINOY-60) div 8;
+      sy:=(DINOY-64) div 8;
       if gameState=1 then
       begin
         adr:=SCREEN_ADDR+208+sx+sy*40;
@@ -283,14 +283,16 @@ begin
         adr:=CRATER_ADDR+sx+sy*40+40;
         ch1:=peek(adr) and $7f;
         inc(adr); ch2:=peek(adr) and $7f;
-        a1:=(byte(ch1)>=$42) and (byte(ch1)<=$4a);
-        a2:=(byte(ch2)>=$42) and (byte(ch2)<=$4a);
-        if (not a1) and (not a2) then // pusta przestrzeń w kraterze
-        begin // dino spada
-          DINOState:=DINOState and (not dsNone) or dsFall;
+        if ((byte(ch1)>=$5d) and (byte(ch1)<=$5f)) or
+           ((byte(ch2)>=$5d) and (byte(ch2)<=$5f)) then
+        begin // ostre skały
+          DINODY:=-8;
+          DINOState:=(DINOState and dsWalk) or dsJump;
         end
         else
-        begin
+        if ((byte(ch1)>=$42) and (byte(ch1)<=$4a)) or
+           ((byte(ch2)>=$42) and (byte(ch2)<=$4a)) then
+        begin // podłoże
           if (DINOState and dsFall)<>0 then // jeżeli spadał...
           begin
             if DINOFallDist>24 then // upadek z wysokości
@@ -308,7 +310,11 @@ begin
             DINOFallDist:=0;
           end;
           DINOY:=64+sy*8; DINODY:=0;
-        end;
+        end
+        else
+        begin // pusta przestrzeń dino spada
+          DINOState:=DINOState and (not dsNone) or dsFall;
+        end
       end;
     end;
   end;
@@ -339,7 +345,6 @@ begin
           DINOState:=(DINOState and dsWalk) or dsJump;
           oJoyFire:=joyFire;
           playSFX(sfxDINOJUMP);
-          // DINOState:=DINOState and (not (dsWalk+dsNone)) or joy2spr[joyDir];
           exit;
         end
         else

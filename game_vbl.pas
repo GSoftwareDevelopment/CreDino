@@ -4,6 +4,7 @@ begin
     xitvbl      = $e462
     sysvbv      = $e45c
     portb       = $d301
+    atract      = $77
 
       phr
 
@@ -12,6 +13,8 @@ begin
 ;      sta VDSLST
 ;      stx VDSLST+1
 
+      lda #0
+      sta atract
 
       ldx #6
   tmLoop:
