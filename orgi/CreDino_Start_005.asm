@@ -3,7 +3,7 @@
 /*  Mode: DLI (char mode)              */
 /***************************************/
 
-	icl "CreDino_Start_003.h"
+	icl "CreDino_Start_005.h"
 
 	org $f0
 
@@ -15,7 +15,7 @@ regA	.ds 1
 regX	.ds 1
 regY	.ds 1
 
-WIDTH	= 48
+WIDTH	= 40
 HEIGHT	= 30
 
 ; ---	BASIC switch OFF
@@ -23,17 +23,17 @@ HEIGHT	= 30
 
 ; ---	MAIN PROGRAM
 	org $2000
-ant	dta $C4,a(scr)
-	dta $84,$84,$84,$84,$04,$04,$04,$04,$04,$04,$04,$04,$04,$84,$04,$04
-	dta $84,$04,$04,$84,$84,$04,$04,$84,$04,$84,$04,$04,$04
+ant	dta $44,a(scr)
+	dta $04,$84,$04,$04,$04,$04,$04,$04,$04,$84,$84,$84,$04,$84,$84,$04
+	dta $84,$04,$84,$04,$04,$84,$04,$84,$84,$04,$04,$04,$04
 	dta $41,a(ant)
 
-scr	ins "CreDino_Start_003.scr"
+scr	ins "CreDino_Start_005.scr"
 
 	.ds 0*40
 
 	.ALIGN $0400
-fnt	ins "CreDino_Start_003.fnt"
+fnt	ins "CreDino_Start_005.fnt"
 
 	ift USESPRITES
 	.ALIGN $0800
@@ -128,95 +128,98 @@ dli1	lda trig0		; FIRE #0
 
 	:3 sta wsync
 
-	DLINEW dli10
+	DLINEW dli12
 
 	eif
 
 dli_start
 
-dli10
-	sta regA
-
-c5	lda #$72
-	sta wsync		;line=8
-	sta color0
-	DLINEW dli11 1 0 0
-
-dli11
-	sta regA
-
-c6	lda #$74
-	sta wsync		;line=16
-	sta color0
-	DLINEW dli12 1 0 0
-
 dli12
 	sta regA
+	stx regX
 
-c7	lda #$76
+c5	lda #$1E
+c6	ldx #$14
 	sta wsync		;line=24
 	sta color0
-	DLINEW dli13 1 0 0
+	stx color2
+	DLINEW dli13 1 1 0
 
 dli13
 	sta regA
 
-c8	lda #$78
-	sta wsync		;line=32
-	sta color0
+c7	lda #$20
+	sta wsync		;line=88
+	sta color2
 	DLINEW dli14 1 0 0
 
 dli14
 	sta regA
 
-c9	lda #$00
-	sta wsync		;line=40
-	sta color0
-	sta wsync		;line=41
-c10	lda #$C6
-	sta wsync		;line=42
-	sta colbak
+c8	lda #$14
+	sta wsync		;line=96
+	sta color2
 	DLINEW DLI.dli2 1 0 0
 
 dli2
 	sta regA
 	lda >fnt+$400*$01
-	sta wsync		;line=120
+	sta wsync		;line=104
 	sta chbase
 	DLINEW dli3 1 0 0
 
 dli3
 	sta regA
 	lda >fnt+$400*$00
-	sta wsync		;line=144
+	sta wsync		;line=120
 	sta chbase
 	DLINEW dli4 1 0 0
 
 dli4
 	sta regA
 	lda >fnt+$400*$01
-	sta wsync		;line=168
+	sta wsync		;line=128
 	sta chbase
 	DLINEW dli5 1 0 0
 
 dli5
 	sta regA
 	lda >fnt+$400*$00
-	sta wsync		;line=176
+	sta wsync		;line=144
 	sta chbase
 	DLINEW dli6 1 0 0
 
 dli6
 	sta regA
+	stx regX
+	sty regY
 	lda >fnt+$400*$01
-	sta wsync		;line=200
+c9	ldx #$14
+c10	ldy #$1E
+	sta wsync		;line=160
 	sta chbase
-	DLINEW dli7 1 0 0
+	stx color0
+	sty color2
+	DLINEW dli7 1 1 1
 
 dli7
 	sta regA
 	lda >fnt+$400*$00
-	sta wsync		;line=216
+	sta wsync		;line=184
+	sta chbase
+	DLINEW dli8 1 0 0
+
+dli8
+	sta regA
+	lda >fnt+$400*$01
+	sta wsync		;line=200
+	sta chbase
+	DLINEW dli9 1 0 0
+
+dli9
+	sta regA
+	lda >fnt+$400*$00
+	sta wsync		;line=208
 	sta chbase
 
 	lda regA
@@ -250,7 +253,7 @@ VBL
 
 	mwa #ant dlptr		;ANTIC address program
 
-	mva #@dmactl(wide|dma|lineX1|players|missiles) dmactl	;set new screen width
+	mva #@dmactl(standard|dma|lineX1|players|missiles) dmactl	;set new screen width
 
 	inc cloc		;little timer
 
@@ -258,15 +261,15 @@ VBL
 
 	lda >fnt+$400*$00
 	sta chbase
-c0	lda #$86
+c0	lda #$00
 	sta colbak
-c1	lda #$70
+c1	lda #$14
 	sta color0
 c2	lda #$16
 	sta color1
-c3	lda #$C6
+c3	lda #$1E
 	sta color2
-c4	lda #$1E
+c4	lda #$0E
 	sta color3
 	lda #$02
 	sta chrctl

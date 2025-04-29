@@ -111,12 +111,65 @@ STS0:
   stx _regX
 
   lda >FNT_STATUS
+  ldx #$14
   sta WSYNC
   sta chbase
   lda #$c6
   sta COLPF1
+  stx COLPF4
 
-  lda #<SKY0
+  lda #<STS1
+  ldx #>STS1
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+STS1:
+  sta _regA
+  stx _regX
+
+  lda #$12
+  sta WSYNC
+  sta COLPF4
+
+  lda #<STS2
+  ldx #>STS2
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+STS2:
+  sta _regA
+  stx _regX
+
+  lda #$10
+  sta WSYNC
+  sta COLPF4
+
+  lda #<STS3
+  ldx #>STS3
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+STS3:
+  sta _regA
+  stx _regX
+
+  lda #$00
+  sta WSYNC
+  sta COLPF4
+
+  lda #<SKy0
   ldx #>SKY0
   sta VDSLST
   stx VDSLST+1
@@ -124,4 +177,5 @@ STS0:
   lda _regA
   ldx _regX
   rti
+
 end;

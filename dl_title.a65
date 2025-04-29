@@ -5,31 +5,31 @@
 dl_s
         dta DL_BLANK8
         dta DL_BLANK8
-        dta DL_BLANK4
+        dta DL_BLANK8 + DL_DLI
 
         dta DL_MODE_40x24T5 + DL_LMS, a(SCR_TITLE)  ; 1
+        dta DL_MODE_40x24T5                         ; 2
+        dta DL_MODE_40x24T5                         ; 3
+        dta DL_MODE_40x24T5                         ; 4
+        dta DL_MODE_40x24T5                         ; 5
+        dta DL_MODE_40x24T5                         ; 6
         dta DL_MODE_40x24T5                         ; 7
-        dta DL_MODE_40x24T5                         ; 8
-        dta DL_MODE_40x24T5                         ; 9
-        dta DL_MODE_40x24T5                         ; 10
+        dta DL_MODE_40x24T5 + DL_DLI                ; 8
+        dta DL_MODE_40x24T5 + DL_DLI                ; 9
+        dta DL_MODE_40x24T5 + DL_DLI                ; 10
         dta DL_MODE_40x24T5                         ; 11
-        dta DL_MODE_40x24T5                         ; 12
-        dta DL_MODE_40x24T5                         ; 13
+        dta DL_MODE_40x24T5 + DL_DLI                ; 12
+        dta DL_MODE_40x24T5 + DL_DLI                ; 13
         dta DL_MODE_40x24T5                         ; 14
         dta DL_MODE_40x24T5 + DL_DLI                ; 15
         dta DL_MODE_40x24T5                         ; 16
-        dta DL_MODE_40x24T5                         ; 17
-        dta DL_MODE_40x24T5 + DL_DLI                ; 18
+        dta DL_MODE_40x24T5 + DL_DLI                ; 17
+        dta DL_MODE_40x24T5                         ; 18
         dta DL_MODE_40x24T5                         ; 19
-        dta DL_MODE_40x24T5                         ; 20
-        dta DL_MODE_40x24T5 + DL_DLI                ; 21
+        dta DL_MODE_40x24T5 + DL_DLI                ; 20
+        dta DL_MODE_40x24T5                         ; 21
         dta DL_MODE_40x24T5 + DL_DLI                ; 22
-        dta DL_MODE_40x24T5                         ; 23
+        dta DL_MODE_40x24T5 + DL_DLI                ; 23
         dta DL_MODE_40x24T5                         ; 24
-        dta DL_MODE_40x24T5 + DL_DLI                ; 25
-        dta DL_MODE_40x24T5                         ; 26
-        dta DL_MODE_40x24T5 + DL_DLI                ; 27
-        dta DL_MODE_40x24T5                         ; 28
-        dta DL_MODE_40x24T5                         ; 29
-        dta DL_MODE_40x24T5                         ; 30
+
         dta DL_JVB, a(dl_s)

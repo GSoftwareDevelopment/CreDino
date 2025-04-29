@@ -8,7 +8,7 @@ begin
 
       phr
 
-      lda 0
+      lda #0
       sta atract
 
       ldx #6

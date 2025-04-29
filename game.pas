@@ -112,7 +112,7 @@ begin
 
   dpoke(DL_GAME+15,SCREEN_ADDR+208);
 
-  FCOL[0]:=$00; FCOL[1]:=$16; FCOL[2]:=$1e; FCOL[3]:=$0F; FCOL[4]:=$00;
+  FCOL[0]:=$00; FCOL[1]:=$C6; FCOL[2]:=$1f; FCOL[3]:=$0F; FCOL[4]:=$00;
   PCOLR[0]:=$04; PCOLR[1]:=$ca;
 
   PMGClear;
@@ -288,6 +288,7 @@ begin
         begin // ostre skały
           DINODY:=-8;
           DINOState:=(DINOState and dsWalk) or dsJump;
+          DINOFallDist:=0;
         end
         else
         if ((byte(ch1)>=$42) and (byte(ch1)<=$4a)) or

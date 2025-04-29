@@ -4,13 +4,15 @@ asm
   _regX = $6E;
   _regY = $6F;
 
-dli0:
+DLI0:
   sta _regA
   stx _regX
 
-  lda #$94
-  sta WSYNC
-  sta chbase
+	lda #$1E
+	ldx #$14
+	sta wsync       ;line=24
+	sta color0
+	stx color2
 
   lda #<DLI1
   ldx #>DLI1
@@ -21,13 +23,13 @@ dli0:
   ldx _regX
   rti
 
-dli1:
+DLI1:
   sta _regA
   stx _regX
 
-  lda #$90
-  sta WSYNC
-  sta chbase
+  lda #$20
+  sta WSYNC       ;line=88
+  sta COLOR2
 
   lda #<DLI2
   ldx #>DLI2
@@ -38,13 +40,13 @@ dli1:
   ldx _regX
   rti
 
-dli2:
+DLI2:
   sta _regA
   stx _regX
 
-  lda #$94
-  sta WSYNC
-  sta chbase
+  lda #$14
+  sta WSYNC       ;line=96
+  sta COLOR2
 
   lda #<DLI3
   ldx #>DLI3
@@ -55,12 +57,12 @@ dli2:
   ldx _regX
   rti
 
-dli3:
+DLI3:
   sta _regA
   stx _regX
 
-  lda #$90
-  sta WSYNC
+  lda #$94
+  sta WSYNC       ;line=104
   sta chbase
 
   lda #<DLI4
@@ -72,12 +74,12 @@ dli3:
   ldx _regX
   rti
 
-dli4:
+DLI4:
   sta _regA
   stx _regX
 
-  lda #$94
-  sta WSYNC
+  lda #$90
+  sta WSYNC       ;line=120
   sta chbase
 
   lda #<DLI5
@@ -89,12 +91,104 @@ dli4:
   ldx _regX
   rti
 
-dli5:
+DLI5:
+  sta _regA
+  stx _regX
+
+  lda #$94
+  sta WSYNC       ;line=128
+  sta chbase
+
+  lda #<DLI6
+  ldx #>DLI6
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+DLI6:
   sta _regA
   stx _regX
 
   lda #$90
+  sta WSYNC       ;line=144
+  sta chbase
+
+  lda #<DLI7
+  ldx #>DLI7
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+DLI7:
+  sta _regA
+  stx _regX
+  sty _regY
+
+  lda #$94
+  ldx #$14
+  ldy #$1e
   sta WSYNC
+  sta chbase
+  stx color0
+  sty color2
+
+  lda #<DLI8
+  ldx #>DLI8
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  ldy _regY
+  rti
+
+DLI8:
+  sta _regA
+  stx _regX
+
+  lda #$90
+  sta WSYNC       ;line=184
+  sta chbase
+
+  lda #<DLI9
+  ldx #>DLI9
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  ldy _regY
+  rti
+
+DLI9:
+  sta _regA
+  stx _regX
+
+  lda #$94
+  sta WSYNC       ;line=200
+  sta chbase
+
+  lda #<DLI10
+  ldx #>DLI10
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+DLI10:
+  sta _regA
+  stx _regX
+
+  lda #$90
+  sta WSYNC       ;line=208
   sta chbase
 
   lda #<DLI0
