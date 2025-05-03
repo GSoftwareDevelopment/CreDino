@@ -1,3 +1,34 @@
+procedure RMTSetVolume(v:byte); assembler; inline;
+asm
+  lda V
+  sta RMTGLOBALVOLUMEFADE
+end;
+
+procedure setGlobalVolume(V:shortint);
+begin
+  if v<0 then v:=0;
+  if v>63 then v:=63;
+  v:=$ff-(v shl 1);
+  RMTSetVolume(v);
+end;
+
+procedure wait4screen; assembler;
+asm
+  lda $d40b
+  bne *-3
+  lda $d40b
+  beq *-3
+end;
+
+procedure wait(i:Byte);
+begin
+  while i>0 do
+  begin
+    wait4screen;
+    dec(i);
+  end;
+end;
+
 procedure TimerReset; Assembler;
 asm
   ldy #7
