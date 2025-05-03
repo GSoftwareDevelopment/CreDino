@@ -91,17 +91,128 @@ var
   joyFire,oJoyFire:Boolean;
 
   pteroState:byte;
-  pteroAdr:Word;
   pteroX:ShortInt;
 
   stoneState:Byte;
-  stoneAdr:Word;
-  oStoneAdr:Word;
   stoneDst:Shortint;
+  shadowOfs:Byte;
+
+{$I softspr.pas}
 
 procedure prepare_stage;
+var
+  x,y:Byte;
+  i,j:Byte;
+
 begin
-  fillchar(pointer(SCREEN_ADDR),1024,0);
+  fillchar(pointer(SCREEN_ADDR),21*40+8,$45);
+  fillchar(pointer(SC2_TITLE),21*40+8,$0);
+  for j:=$3a to $3f do
+  begin
+    for i:=0 to 9 do
+    begin
+      repeat
+        x:=RANDOM(40);
+        y:=RANDOM(16);
+        adr:=SC2_TITLE+208+x+y*40;
+      until peek(adr)=0;
+
+      poke(adr,j);
+    end;
+  end;
+  for i:=0 to 9 do
+  begin
+    j:=RANDOM(6);
+    repeat
+      x:=RANDOM(40);
+      y:=RANDOM(15);
+      adr:=sc2_title+248;
+    until testCactusSpace(x,y,j);
+    adr:=sc2_title+248;
+    drawCactus(x,y,j);
+  end;
+end;
+
+procedure game_fadeIn;
+var
+  j:word absolute $d9; // d9-da
+  v:byte absolute $db;
+  k:Byte absolute $dc;
+  i:Byte absolute $dd;
+  adr:word absolute $de; // de-df
+
+begin
+  i:=0;
+  repeat
+    wait4screen;
+    k:=i+FADE_STEP;
+    adr:=SCREEN_ADDR;
+    for j:=0 to 39 do
+    begin
+      v:=peek(FAD_TITLE+j);
+      if (v>=i) and (v<k) then
+        poke(adr,Peek(SC2_TITLE+j));
+      inc(adr);
+    end;
+    adr:=SCREEN_ADDR+44;
+    for j:=40 to 79 do
+    begin
+      v:=peek(FAD_TITLE+j);
+      if (v>=i) and (v<k) then
+        poke(adr,Peek(SC2_TITLE+j));
+      inc(adr);
+    end;
+    adr:=SCREEN_ADDR+88;
+    for j:=80 to 959 do
+    begin
+      v:=peek(FAD_TITLE+j);
+      if (v>=i) and (v<k) then
+        poke(adr,Peek(SC2_TITLE+j));
+      inc(adr);
+    end;
+    i:=k;
+  until i>69;
+end;
+
+procedure game_fadeOut;
+var
+  j:word absolute $d9; // d9-da
+  v:byte absolute $db;
+  k:Byte absolute $dc;
+  i:Byte absolute $dd;
+  adr:word absolute $de; // de-df
+
+begin
+  i:=0;
+  repeat
+    wait4screen;
+    k:=i+FADE_STEP;
+    adr:=SCREEN_ADDR;
+    for j:=0 to 39 do
+    begin
+      v:=peek(FAD_TITLE+j);
+      if (v>=i) and (v<k) then
+        poke(adr,$45);
+      inc(adr);
+    end;
+    adr:=SCREEN_ADDR+44;
+    for j:=40 to 79 do
+    begin
+      v:=peek(FAD_TITLE+j);
+      if (v>=i) and (v<k) then
+        poke(adr,$45);
+      inc(adr);
+    end;
+    adr:=SCREEN_ADDR+88;
+    for j:=80 to 959 do
+    begin
+      v:=peek(FAD_TITLE+j);
+      if (v>=i) and (v<k) then
+        poke(adr,$45);
+      inc(adr);
+    end;
+    i:=k;
+  until i>69;
 end;
 
 procedure init_game;
@@ -110,29 +221,30 @@ begin
   DL:=Pointer(DL_GAME);
   CHBAS:=Hi(FNT_GAME);
 
-  dpoke(DL_GAME+15,SCREEN_ADDR+208);
-
-  FCOL[0]:=$00; FCOL[1]:=$C6; FCOL[2]:=$1f; FCOL[3]:=$0F; FCOL[4]:=$00;
+  FCOL[4]:=$00; FCOL[0]:=$16; FCOL[1]:=$C6; FCOL[2]:=$1f; FCOL[3]:=$0F;
   PCOLR[0]:=$04; PCOLR[1]:=$ca;
 
   PMGClear;
 
   prepare_stage;
-  dpoke(DL_GAME+33,STATUS_ADDR);
+
+  dpoke(DL_GAME_ADDR,SCR_GAME);
+  dpoke(DL_STAT_ADDR,STATUS_ADDR);
 
   turnOn(@VBL_Game_Screen,@DLI_Game_Screen,%111110);
 
-  GPRIO:=$22;
+  GPRIO:=%100001;
   PMBASE:=HI(PMG_ADDR);
   PMCNTL:=3;
 
-  DINOX:=128;
-  DINOY:=128;
+  oDINOY:=255;
+  DINOX:=0;  DINOY:=128;
   DINOFrm:=0;
   DINOState:=dsNone;
+  wait4screen;
 
   pteroState:=255;
-  timer[tmPteroDly]:=200+random(25);
+  timer[tmPteroDly]:=200+random(55);
   stoneState:=255;
   stoneDst:=0;
 
@@ -154,8 +266,6 @@ procedure DinoAnim;
 var
   sprBase:Byte;
   sx,sy:Byte;
-  adr:Word;
-  ch1,ch2:Byte;
   cnsl:Byte;
   a1,a2:Boolean;
 
@@ -226,9 +336,9 @@ begin
               if DINOY=64 then // górna krawędź ekrnu gry
               begin // wyjście z krateru
                 gameState:=1;
-                dpoke(DL_GAME+15,SCREEN_ADDR+208);
+                dpoke(DL_GAME_ADDR,SCR_GAME);
                 PMGClear;
-                  DINOX:=outDINOX; DINOY:=outDINOY;
+                DINOX:=outDINOX; DINOY:=outDINOY;
                 // DINOX:=128; DINOY:=64;
                 DINOState:=dsNone;
                 DINODX:=0; DINODY:=0;
@@ -254,17 +364,17 @@ begin
         end;
       end;
 
-      sx:=(DINOX-46) div 4;
-      sy:=(DINOY-64) div 8;
       if gameState=1 then
       begin
-        adr:=SCREEN_ADDR+208+sx+sy*40;
+        sx:=(DINOX-46) div 4;
+        sy:=(DINOY-60) div 8;
+        adr:=SCR_GAME+40+sx+sy*40;
         ch1:=peek(adr); inc(adr); ch2:=peek(adr);
-        if ((ch1>=$2a) and (ch1<=$2d)) and
-           ((ch2>=$2a) and (ch2<=$2d)) then
+        if ((ch1>=$2c) and (ch1<=$2f)) and
+           ((ch2>=$2c) and (ch2<=$2f)) then
         begin // wpadnięcie do krateru
           gameState:=2;
-          dpoke(DL_GAME+15,CRATER_ADDR);
+          dpoke(DL_GAME_ADDR,CRATER_ADDR);
           PMGClear;
           outDINOX:=DINOX+DINODX*4; outDINOY:=DINOY+DINODY*6;
 
@@ -280,7 +390,9 @@ begin
       end
       else if gameState=2 then
       begin
-        adr:=CRATER_ADDR+sx+sy*40+40;
+        sx:=(DINOX-46) div 4;
+        sy:=(DINOY-64) div 8;
+        adr:=CRATER_ADDR+40+sx+sy*40+40;
         ch1:=peek(adr) and $7f;
         inc(adr); ch2:=peek(adr) and $7f;
         if ((byte(ch1)>=$5d) and (byte(ch1)<=$5f)) or
@@ -366,34 +478,20 @@ begin
   if (timer[tmPteroAnim]=0) and (pteroState<>255) then
   begin
     timer[tmPteroAnim]:=7;
-    pteroAdr:=SCREEN_ADDR+40+PteroX;
-    if pteroState=1 then
-    begin
-      poke(pteroAdr,$e0); inc(pteroAdr);
-      poke(pteroAdr,$e1); inc(pteroAdr);
-      poke(pteroAdr,$e2); inc(pteroAdr);
-      poke(pteroAdr,$e3); inc(pteroAdr);
-      poke(pteroAdr,$0);
-    end
-    else
-    begin
-      poke(pteroAdr,$e4); inc(pteroAdr);
-      poke(pteroAdr,$e5); inc(pteroAdr);
-      poke(pteroAdr,$e6); inc(pteroAdr);
-      poke(pteroAdr,$e7); inc(pteroAdr);
-      poke(pteroAdr,$0);
-    end;
+    Adr:=SCREEN_ADDR+40+PteroX;
+    drawPtero;
     inc(pteroState,1); if pteroState=4 then pteroState:=1;
     if pteroX>0 then
       dec(pteroX) // ptero przesówa się w lewo
     else
     begin // ptero kończy swój lot
-      poke(pteroAdr,$0); inc(pteroAdr);
-      poke(pteroAdr,$0); inc(pteroAdr);
-      poke(pteroAdr,$0); inc(pteroAdr);
-      poke(pteroAdr,$0);
+      clearPtero;
       pteroState:=255; // status ptero wyłączony
-      timer[tmPteroDly]:=25+Random(50); // losowanie nowego czasu na pokazanie się ptero
+{$IFNDEF QUICK}
+      timer[tmPteroDly]:=25+Random(200); // losowanie nowego czasu na pokazanie się ptero
+{$ELSE}
+      timer[tmPteroDly]:=10; // losowanie nowego czasu na pokazanie się ptero
+{$ENDIF}
     end;
   end;
 end;
@@ -425,6 +523,9 @@ begin
 end;
 
 procedure stoneControl;
+var
+  n:Byte;
+
 begin
   if stoneState=255 then exit; // pomiń, gdy status zrzutu wyłączony
   if timer[tmPteroSht]<>0 then exit; // pomiń, gdy czas zrzutu nie jest osiągnięty
@@ -435,31 +536,36 @@ begin
     STONEY:=40;
     stoneState:=1;
     PlaySFX(sfxPTERODROP);
+    shadowOfs:=48+stoneDst*4;
   end
   else
   begin
-    dec(stoneDst); // zmniejsza dystans zrzutu
+    dec(stoneDst); // zmniejsz dystans zrzutu
+
     if stoneDst=0 then // jeżeli dystans zrzutu osiągnięty
     begin
       stoneState:=255; // status zrzutu, wyłączony
-      StoneAdr:=SCREEN_ADDR+84+((STONEY-36) div 8)*40+((STONEX-28) div 4);
-      dec(StoneAdr,2); // rysuj krater
-      poke(StoneAdr,$2a); inc(StoneAdr,1);
-      poke(StoneAdr,$2b); inc(StoneAdr,1);
-      poke(StoneAdr,$2c); inc(StoneAdr,1);
-      poke(StoneAdr,$2d);
+      adr:=SCREEN_ADDR+84+((STONEY-36) div 8)*40+((STONEX-28) div 4);
+      dec(adr,2); // rysuj krater
+      DrawCrater;
       STONEX:=0; STONEY:=255;
       PlaySFX(sfxSTONEHIT);
 
       exit;
     end;
-    oStoneAdr:=stoneAdr;
 
     STONEFrm:=1-STONEFrm;
     stoneState:=1+STONEFrm;
 
     STONEX:=STONEX-2;
     STONEY:=STONEY+4;
+
+    // rysuj cień
+    if stoneDst>10 then n:=0
+    else if stoneDst>5 then n:=1
+    else if stoneDst>2 then n:=2;
+    adr:=SHADOWP2[n];
+    move(pointer(adr),_PL2[shadowOfs],4);
 
     timer[tmPteroSht]:=4; // ustaw timer szybkości zrzutu
   end;
@@ -471,19 +577,32 @@ var
 
 begin
   KEYB:=255;
+  STONEY:=255; DINOX:=0;
   PMGClear;
 
-  dpoke(DL_GAME+33,GOVER_ADDR);
-
-  for i:=0 to 199 do
-    wait4screen;
-
+  dpoke(DL_STAT_ADDR,GOVER_ADDR);
+{$IFNDEF QUICK}
+  game_fadeOut;
+  wait(200);
+{$ELSE}
+  fillChar(pointer(SCREEN_ADDR),21*40+8,$45);
+  wait4screen;
+{$ENDIF}
 end;
 
 procedure game_loop;
 
 begin
+{$IFNDEF QUICK}
   msx.Init($c);
+  game_fadeIn;
+  wait(110);
+{$ELSE}
+  msx.Init($d);
+  move(pointer(SC2_TITLE),pointer(SCREEN_ADDR),21*40+8);
+{$ENDIF}
+  DINOX:=128;  DINOY:=128;
+
   repeat
     DinoAnim;
     PteroAnim;
@@ -494,5 +613,4 @@ begin
   until gameState=3;
 
   Over_Init;
-
 end;

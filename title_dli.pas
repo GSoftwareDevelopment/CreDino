@@ -130,12 +130,12 @@ DLI7:
   stx _regX
   sty _regY
 
-  lda #$94
-  ldx #$14
-  ldy #$1e
-  sta WSYNC
-  sta chbase
-  stx color0
+  lda #$14
+  ldx #$08
+  ldy #$0e
+  sta WSYNC     ; line=152
+  sta color0
+  stx color1
   sty color2
 
   lda #<DLI8
@@ -152,8 +152,8 @@ DLI8:
   sta _regA
   stx _regX
 
-  lda #$90
-  sta WSYNC       ;line=184
+  lda #$94
+  sta WSYNC       ;line=160
   sta chbase
 
   lda #<DLI9
@@ -163,15 +163,14 @@ DLI8:
 
   lda _regA
   ldx _regX
-  ldy _regY
   rti
 
 DLI9:
   sta _regA
   stx _regX
 
-  lda #$94
-  sta WSYNC       ;line=200
+  lda #$90
+  sta WSYNC       ;line=184
   sta chbase
 
   lda #<DLI10
@@ -186,10 +185,69 @@ DLI9:
 DLI10:
   sta _regA
   stx _regX
+  sty _regY
+
+  lda #$16
+  ldx #$ca
+  ldy #$1e
+  sta WSYNC     ; line=192
+  sta color0
+  stx color1
+  sty color2
+
+  lda #<DLI11
+  ldx #>DLI11
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  ldy _regY
+  rti
+
+DLI11:
+  sta _regA
+  stx _regX
+
+  lda #$94
+  sta WSYNC       ;line=200
+  sta chbase
+
+  lda #<DLI12
+  ldx #>DLI12
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+DLI12:
+  sta _regA
+  stx _regX
 
   lda #$90
   sta WSYNC       ;line=208
   sta chbase
+
+  lda #<DLI13
+  ldx #>DLI13
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+DLI13:
+  sta _regA
+  stx _regX
+
+  lda #$14
+  ldx #$16
+  sta WSYNC       ;line=216
+  sta color0
+  stx color1
 
   lda #<DLI0
   ldx #>DLI0

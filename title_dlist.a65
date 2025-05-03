@@ -7,7 +7,7 @@ dl_s
         dta DL_BLANK8
         dta DL_BLANK8 + DL_DLI
 
-        dta DL_MODE_40x24T5 + DL_LMS, a(SCR_TITLE)  ; 1
+        dta DL_MODE_40x24T5 + DL_LMS, a(SC2_TITLE)  ; 1
         dta DL_MODE_40x24T5                         ; 2
         dta DL_MODE_40x24T5                         ; 3
         dta DL_MODE_40x24T5                         ; 4
@@ -22,14 +22,14 @@ dl_s
         dta DL_MODE_40x24T5 + DL_DLI                ; 13
         dta DL_MODE_40x24T5                         ; 14
         dta DL_MODE_40x24T5 + DL_DLI                ; 15
-        dta DL_MODE_40x24T5                         ; 16
+        dta DL_MODE_40x24T5 + DL_DLI                ; 16
         dta DL_MODE_40x24T5 + DL_DLI                ; 17
         dta DL_MODE_40x24T5                         ; 18
         dta DL_MODE_40x24T5                         ; 19
         dta DL_MODE_40x24T5 + DL_DLI                ; 20
-        dta DL_MODE_40x24T5                         ; 21
+        dta DL_MODE_40x24T5 + DL_DLI                ; 21
         dta DL_MODE_40x24T5 + DL_DLI                ; 22
         dta DL_MODE_40x24T5 + DL_DLI                ; 23
-        dta DL_MODE_40x24T5                         ; 24
+        dta DL_MODE_40x24T5 + DL_DLI                ; 24
 
         dta DL_JVB, a(dl_s)

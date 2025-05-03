@@ -3,7 +3,7 @@
 /*  Mode: DLI (char mode)              */
 /***************************************/
 
-	icl "CreDino_Start_005.h"
+	icl "CreDino_Start_006.h"
 
 	org $f0
 
@@ -25,15 +25,15 @@ HEIGHT	= 30
 	org $2000
 ant	dta $44,a(scr)
 	dta $04,$84,$04,$04,$04,$04,$04,$04,$04,$84,$84,$84,$04,$84,$84,$04
-	dta $84,$04,$84,$04,$04,$84,$04,$84,$84,$04,$04,$04,$04
+	dta $84,$84,$84,$04,$04,$84,$84,$84,$84,$84,$04,$04,$04
 	dta $41,a(ant)
 
-scr	ins "CreDino_Start_005.scr"
+scr	ins "CreDino_Start_006.scr"
 
 	.ds 0*40
 
 	.ALIGN $0400
-fnt	ins "CreDino_Start_005.fnt"
+fnt	ins "CreDino_Start_006.fnt"
 
 	ift USESPRITES
 	.ALIGN $0800
@@ -187,27 +187,49 @@ dli5
 	lda >fnt+$400*$00
 	sta wsync		;line=144
 	sta chbase
-	DLINEW dli6 1 0 0
+	DLINEW dli15 1 0 0
 
-dli6
+dli15
 	sta regA
 	stx regX
 	sty regY
+
+c9	lda #$14
+c10	ldx #$08
+c11	ldy #$0E
+	sta wsync		;line=152
+	sta color0
+	stx color1
+	sty color2
+	DLINEW dli6 1 1 1
+
+dli6
+	sta regA
 	lda >fnt+$400*$01
-c9	ldx #$14
-c10	ldy #$1E
 	sta wsync		;line=160
 	sta chbase
-	stx color0
-	sty color2
-	DLINEW dli7 1 1 1
+	DLINEW dli7 1 0 0
 
 dli7
 	sta regA
 	lda >fnt+$400*$00
 	sta wsync		;line=184
 	sta chbase
-	DLINEW dli8 1 0 0
+	DLINEW dli16 1 0 0
+
+dli16
+	sta regA
+	stx regX
+	sty regY
+
+c12	lda #$16
+c13	ldx #$CA
+c14	ldy #$1E
+	sta wsync		;line=192
+	sta color0
+	stx color1
+	sty color2
+	DLINEW dli8 1 1 1
 
 dli8
 	sta regA
@@ -221,8 +243,20 @@ dli9
 	lda >fnt+$400*$00
 	sta wsync		;line=208
 	sta chbase
+	DLINEW dli17 1 0 0
+
+dli17
+	sta regA
+	stx regX
+
+c15	lda #$14
+c16	ldx #$16
+	sta wsync		;line=216
+	sta color0
+	stx color1
 
 	lda regA
+	ldx regX
 	rti
 
 .endl

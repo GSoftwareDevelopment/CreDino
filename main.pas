@@ -15,11 +15,15 @@ Program DinoCrater;
 {$DEFINE BASICOFF}
 {$DEFINE ROMOFF}
 {$DEFINE NOROMFONT}
+{$DEFINE QUICK}
 Uses Atari, RMT;
 
 const
 {$I memory.inc}
 {$R resources.rc}
+
+const
+  FADE_STEP = 1;
 
 var
   msx:TRMT;
@@ -44,11 +48,11 @@ var
   [Volatile] CHBASE:Byte        absolute 54281;
   [Volatile] WSYNC:Byte         absolute 54282;
 
-  timer:Array[0..6] of byte     absolute $D4;
+  timer:Array[0..6] of byte     absolute $F4;
 
   gameState:Byte;
+  startVol:Boolean;
 
-{$I screen.pas}
 {$I game_helpers.pas}
 {$I pmg.pas}
 
@@ -59,6 +63,10 @@ var
 begin
   msx.player:=pointer(rmt_player);
   msx.modul:=pointer(rmt_modul);
+  startVol:=false;
+{$IFNDEF QUICK}
+  msx.Init($0);
+{$ENDIF}
 
   repeat
 
