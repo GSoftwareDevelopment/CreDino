@@ -1,92 +1,15 @@
 {$I game_vbl.pas}
 {$I game_dli.pas}
 
-const
-  dsNone      = 128;
-  dsWalkLeft  = 0;
-  dsWalkRight = 2;
-  dsWalkUp    = 4;
-  dsWalkDown  = 6;
-  dsWalk      = 6;
-  dsFall      = 8;
-  dsJump      = 16;
-  dsHeadStars = 32;
-
-  tmDinoAnim  = 0;
-  tmPteroAnim = 1;
-  tmPteroDly  = 2;
-  tmPteroSht  = 3;
-  tmStars     = 3;
-
-  sfxDINOSTEP = $14;
-  sfxDINOFALL = $11;
-  sfxDINOJUMP = $10;
-
-  sfxPTERODROP = $15;
-  sfxSTONEHIT  = $12;
-
-const
-  joy2spr:Array[0..15] of Byte = (
-{ 0}    255,
-{ 1}    255,
-{ 2}    255,
-{ 3}    255,
-{ 4}    255,
-{ 5}    255,
-{ 6}    255,
-{ 7}      0, { Right }
-{ 8}    255,
-{ 9}    255,
-{10}    255,
-{11}      2, { Left }
-{12}    255,
-{13}      6, { Down }
-{14}      4, { Up }
-{15}    255
-  );
-
-  joy2dx:Array[0..15] of Shortint = (
-{ 0}    0,
-{ 1}    0,
-{ 2}    0,
-{ 3}    0,
-{ 4}    0,
-{ 5}    0,
-{ 6}    0,
-{ 7}    2, { Right }
-{ 8}    0,
-{ 9}    0,
-{10}    0,
-{11}   -2, { Left }
-{12}    0,
-{13}    0, { Down }
-{14}    0, { Up }
-{15}    0
-  );
-
-  joy2dy:Array[0..15] of Shortint = (
-{ 0}    0,
-{ 1}    0,
-{ 2}    0,
-{ 3}    0,
-{ 4}    0,
-{ 5}    0,
-{ 6}    0,
-{ 7}    0, { Right }
-{ 8}    0,
-{ 9}    0,
-{10}    0,
-{11}    0, { Left }
-{12}    0,
-{13}    4, { Down }
-{14}   -4, { Up }
-{15}    0
-  );
+{$I game_const.pas}
 
 var
 
   DINOState:Byte;
   DINOFallDist:Byte;
+  DINOshadowOfs:byte;
+  DINOJumpVMove:Shortint;
+
   joyDir:Byte;
   joyFire,oJoyFire:Boolean;
 
@@ -106,7 +29,8 @@ var
 
 begin
   fillchar(pointer(SCREEN_ADDR),21*40+8,$45);
-  fillchar(pointer(SC2_TITLE),21*40+8,$0);
+  fillchar(pointer(SC2_TITLE),5*40+8,$0);
+  fillchar(pointer(SC2_TITLE)+5*40+8,16*40+8,$0);
   for j:=$3a to $3f do
   begin
     for i:=0 to 9 do
@@ -221,7 +145,7 @@ begin
   DL:=Pointer(DL_GAME);
   CHBAS:=Hi(FNT_GAME);
 
-  FCOL[4]:=$00; FCOL[0]:=$16; FCOL[1]:=$C6; FCOL[2]:=$1f; FCOL[3]:=$0F;
+  FCOL[4]:=$00; FCOL[0]:=$1f; FCOL[1]:=$C6; FCOL[2]:=$16; FCOL[3]:=$0F;
   PCOLR[0]:=$04; PCOLR[1]:=$ca;
 
   PMGClear;
@@ -233,7 +157,7 @@ begin
 
   turnOn(@VBL_Game_Screen,@DLI_Game_Screen,%111110);
 
-  GPRIO:=%100001;
+  GPRIO:=%101000;
   PMBASE:=HI(PMG_ADDR);
   PMCNTL:=3;
 
@@ -270,166 +194,66 @@ var
   a1,a2:Boolean;
 
 begin
-//  if gameState=1 then
+  if (DINOState and (dsJump+dsFall+dsNone+dsHeadStars)=0) and ((DINODX=0) and (DINODY=0)) then
   begin
-    if (DINOState and (dsJump+dsFall+dsNone+dsHeadStars)=0) and ((DINODX=0) and (DINODY=0)) then
-    begin
-      DINOState:=DINOState or dsNone;
-      DINOFrm:=DINOFrm and 2;
-    end;
+    DINOState:=DINOState or dsNone;
+    DINOFrm:=DINOFrm and 2;
   end;
-  if DINOState and dsNone=0 then
-  begin
-    if timer[tmDinoAnim]=0 then
+
+  if DINOState and dsNone<>0 then exit;
+  if timer[tmDinoAnim]>0 then exit;
+
+  timer[tmDinoAnim]:=3;
+  if (DINOState and dsHeadStars<>0) then
+  begin // gwiazdki nad dinusiem
+    if timer[tmStars]<>0 then
+      DINOFrm:=8 or (DINOFrm and 1 xor 1)
+    else
     begin
-      timer[tmDinoAnim]:=3;
-      if (DINOState and dsHeadStars<>0) then
-      begin // gwiazdki nad dinusiem
-        if timer[tmStars]<>0 then
-          DINOFrm:=8 or (DINOFrm and 1 xor 1)
-        else
-        begin
-          DINOState:=DINOState and (not dsHeadStars) or dsNone;
-          DINOFrm:=(DINOState and dsWalk);
-        end;
-        exit;
-      end;
-
-      if DINOState and dsJUMP=0 then
-        DINOFrm:=(DINOState and dsWalk) or (DINOFrm and 1 xor 1); // przełączenie klatki spritea
-
-
-      if DINODX<>0 then // przesunięcie Dino w osi X
-      begin
-        inc(DINOX,DINODX);
-        if DINODX>0 then
-          dec(DINODX)
-        else
-          inc(DINODX);
-        if (DINOState and (dsJUMP+dsFall)=0) and ((DINOFrm and 1)=0) then
-          PlaySFX(sfxDINOSTEP);
-      end;
-
-      if gameState=1 then // ekran pierwszy
-      begin
-        if DINODY<>0 then
-        begin
-          inc(DINOY,DINODY);
-          if DINODY>0 then
-            dec(DINODY)
-          else
-            inc(DINODY);
-          if (gameState=1) and (DINOFrm and 1=0) then
-            PlaySFX(sfxDINOSTEP);
-        end;
-      end
-      else
-      begin // ekran drugi
-        if DINOState and dsFall=0 then
-        begin
-          if (DINOState and dsJump<>0) then
-          begin
-            if (DINODY<0) then // podskok
-            begin
-              inc(DINOY,DINODY);
-              inc(DINODY,2);
-              if DINOY=64 then // górna krawędź ekrnu gry
-              begin // wyjście z krateru
-                gameState:=1;
-                dpoke(DL_GAME_ADDR,SCR_GAME);
-                PMGClear;
-                DINOX:=outDINOX; DINOY:=outDINOY;
-                // DINOX:=128; DINOY:=64;
-                DINOState:=dsNone;
-                DINODX:=0; DINODY:=0;
-              end;
-              exit;
-            end
-            else // kończy podskok i zaczyna opadać
-              DINOState:=DINOState and (not dsJUMP) or dsFall;
-
-          end;
-        end
-        else
-        begin // dino spada w dół
-          if DINODY>0 then
-            DINOFallDist:=DINOFallDist+DINODY;
-          if DINODY<7 then inc(DINODY,2);
-          inc(DINOY,DINODY);
-          if DINOY>=183 then // śmierć w kraterze
-          begin
-            gameState:=3; DINOState:=dsNone;
-            DINOX:=0;
-          end;
-        end;
-      end;
-
-      if gameState=1 then
-      begin
-        sx:=(DINOX-46) div 4;
-        sy:=(DINOY-60) div 8;
-        adr:=SCR_GAME+40+sx+sy*40;
-        ch1:=peek(adr); inc(adr); ch2:=peek(adr);
-        if ((ch1>=$2c) and (ch1<=$2f)) and
-           ((ch2>=$2c) and (ch2<=$2f)) then
-        begin // wpadnięcie do krateru
-          gameState:=2;
-          dpoke(DL_GAME_ADDR,CRATER_ADDR);
-          PMGClear;
-          outDINOX:=DINOX+DINODX*4; outDINOY:=DINOY+DINODY*6;
-
-          DINOY:=68; DINOX:=128;
-          DINODX:=0;
-          DINODY:=4;
-          DINOFallDist:=0;
-          PlaySFX(sfxDINOFALL);
-
-          DINOState:=DINOState and (not dsWalk+dsNone);
-          DINOState:=DINOState or dsWalkUp+dsFall;
-        end;
-      end
-      else if gameState=2 then
-      begin
-        sx:=(DINOX-46) div 4;
-        sy:=(DINOY-64) div 8;
-        adr:=CRATER_ADDR+40+sx+sy*40+40;
-        ch1:=peek(adr) and $7f;
-        inc(adr); ch2:=peek(adr) and $7f;
-        if ((byte(ch1)>=$5d) and (byte(ch1)<=$5f)) or
-           ((byte(ch2)>=$5d) and (byte(ch2)<=$5f)) then
-        begin // ostre skały
-          DINODY:=-8;
-          DINOState:=(DINOState and dsWalk) or dsJump;
-          DINOFallDist:=0;
-        end
-        else
-        if ((byte(ch1)>=$42) and (byte(ch1)<=$4a)) or
-           ((byte(ch2)>=$42) and (byte(ch2)<=$4a)) then
-        begin // podłoże
-          if (DINOState and dsFall)<>0 then // jeżeli spadał...
-          begin
-            if DINOFallDist>24 then // upadek z wysokości
-            begin
-              if DINOState and dsWalk=dsWalkUp then
-                DINOState:=(DINOState and (not dsWalk)) or dsWalkRight;
-              DINOState:=(DINOState and dsWalk) or dsHeadStars;
-              Timer[tmStars]:=100;
-            end
-            else
-            begin
-              DINOState:=(DINOState and dsWalk) or dsNone;
-              DINOFrm:=DINOFrm and 3;
-            end;
-            DINOFallDist:=0;
-          end;
-          DINOY:=64+sy*8; DINODY:=0;
-        end
-        else
-        begin // pusta przestrzeń dino spada
-          DINOState:=DINOState and (not dsNone) or dsFall;
-        end
-      end;
+      DINOState:=DINOState and (not dsHeadStars) or dsNone;
+      DINOFrm:=(DINOState and dsWalk);
     end;
+    exit;
+  end;
+
+  if DINOState and dsJUMP=0 then
+    DINOFrm:=(DINOState and dsWalk) or (DINOFrm and 1 xor 1) // przełączenie klatki spritea
+  else
+  begin
+    if gameState=1 then
+      if DINOState and (dsJUMP+dsFall)<>0 then
+        DINOFrm:=(DINOState and dsWalk) or (DINOFrm and 1);
+  end;
+
+
+  if DINODX<>0 then // chodzenie lewo/prawo
+  begin
+    inc(DINOX,DINODX);
+    if DINODX>0 then
+      dec(DINODX)
+    else
+      inc(DINODX);
+    if (DINOState and (dsJUMP+dsFall)=0) and ((DINOFrm and 1)=0) then
+      PlaySFX(sfxDINOSTEP);
+  end;
+
+  if gameState=1 then // ekran pierwszy
+  begin
+    {$I 'game-dinoanim-logic-scr1.pas'}
+  end
+  else
+  begin // ekran drugi
+    {$I 'game-dinoanim-logic-scr2.pas'}
+  end;
+
+// character collisions
+  if gameState=1 then
+  begin
+    {$I 'game-dinocollision-logic-scr1.pas'}
+  end
+  else if gameState=2 then
+  begin
+    {$I 'game-dinocollision-logic-scr2.pas'}
   end;
 end;
 
@@ -440,11 +264,27 @@ begin
 
   if gameState=1 then // -- scena główna
   begin
+    if (DINOState and (dsFall+dsJump)=0) then
+      if (joyFire and not oJoyFire) then // -- skok dinusia
+      begin
+        DINODY:=-8;
+        DINOState:=(DINOState and dsWalk) or dsJump;
+        DINOshadowOfs:=DINOY+12;
+        oJoyFire:=joyFire;
+        playSFX(sfxDINOJUMP);
+        exit;
+      end
+      else
+        oJoyFire:=joyFire;
+
     if joy2spr[joyDir]<>255 then // -- ruch dinusia
     begin
       DINOState:=DINOState and (not (dsWalk+dsNone)) or joy2spr[joyDir];
       DINODX:=joy2dx[joyDir];
-      DINODY:=joy2dy[joyDir];
+      if DINOState and (dsFall+dsJump)=0 then
+        DINODY:=joy2dy[joyDir]
+      else
+        DINOJumpVMove:=joy2dy[joyDir];
     end;
   end
   else if gameState=2 then // -- scena z kraterem
@@ -582,6 +422,7 @@ begin
 
   dpoke(DL_STAT_ADDR,GOVER_ADDR);
 {$IFNDEF QUICK}
+  msx.Init($15);
   game_fadeOut;
   wait(200);
 {$ELSE}
@@ -602,6 +443,11 @@ begin
   move(pointer(SC2_TITLE),pointer(SCREEN_ADDR),21*40+8);
 {$ENDIF}
   DINOX:=128;  DINOY:=128;
+
+{$IFNDEF QUICK}
+  wait(100);
+  msx.Init($f);
+{$ENDIF}
 
   repeat
     DinoAnim;

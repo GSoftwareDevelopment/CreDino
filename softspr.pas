@@ -10,18 +10,18 @@ procedure drawPtero; inline;
 begin
   if pteroState=1 then
   begin
-      poke(Adr,$e0); inc(Adr);
-      poke(Adr,$e1); inc(Adr);
-      poke(Adr,$e2); inc(Adr);
-      poke(Adr,$e3); inc(Adr);
+      poke(Adr,$60); inc(Adr);
+      poke(Adr,$61); inc(Adr);
+      poke(Adr,$62); inc(Adr);
+      poke(Adr,$63); inc(Adr);
       poke(Adr,$0);
   end
   else
   begin
-      poke(Adr,$e4); inc(Adr);
-      poke(Adr,$e5); inc(Adr);
-      poke(Adr,$e6); inc(Adr);
-      poke(Adr,$e7); inc(Adr);
+      poke(Adr,$64); inc(Adr);
+      poke(Adr,$65); inc(Adr);
+      poke(Adr,$66); inc(Adr);
+      poke(Adr,$67); inc(Adr);
       poke(Adr,$0);
   end;
 end;

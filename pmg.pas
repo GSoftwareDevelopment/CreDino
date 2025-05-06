@@ -69,7 +69,7 @@ begin
   HPOSP[1]:=DINOX;
   if oDINOY<>DINOY then
   begin
-    if DINOY<64 then DINOY:=64;
+    if DINOY<40 then DINOY:=40;
     if DINOY>184 then DINOY:=184;
     if DINOY<oDINOY then // skasuj dolną "różnice"
     Begin

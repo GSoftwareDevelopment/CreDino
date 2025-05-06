@@ -10,7 +10,7 @@ SKY0:
 
   lda #$82
   sta WSYNC
-  sta COLPF0
+  sta COLPF2
 
   lda #<SKY1
   ldx #>SKY1
@@ -27,7 +27,7 @@ SKY1:
 
   lda #$84
   sta WSYNC
-  sta COLPF0
+  sta COLPF2
 
   lda #<SKY2
   ldx #>SKY2
@@ -44,7 +44,7 @@ SKY2:
 
   lda #$86
   sta WSYNC
-  sta COLPF0
+  sta COLPF2
 
   lda #<SKY3
   ldx #>SKY3
@@ -61,7 +61,7 @@ SKY3:
 
   lda #$88
   sta WSYNC
-  sta COLPF0
+  sta COLPF2
 
   lda #<SKY4
   ldx #>SKY4
@@ -78,7 +78,7 @@ SKY4:
 
   lda #$8a
   sta WSYNC
-  sta COLPF0
+  sta COLPF2
 
   lda #<GND0
   ldx #>GND0
@@ -95,7 +95,7 @@ GND0:
 
   lda #$16
   sta WSYNC
-  sta COLPF0
+  sta COLPF2
 
   lda #<STS0
   ldx #>STS0

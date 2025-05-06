@@ -15,7 +15,7 @@ Program DinoCrater;
 {$DEFINE BASICOFF}
 {$DEFINE ROMOFF}
 {$DEFINE NOROMFONT}
-{$DEFINE QUICK}
+//{$DEFINE QUICK}
 Uses Atari, RMT;
 
 const
@@ -23,7 +23,7 @@ const
 {$R resources.rc}
 
 const
-  FADE_STEP = 1;
+  FADE_STEP = 3;
 
 var
   msx:TRMT;

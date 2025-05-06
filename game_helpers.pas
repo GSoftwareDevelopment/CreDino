@@ -44,7 +44,7 @@ begin
   if nsfx=$15 then
     MSX.SFX(nsfx,2,1)
   else
-    MSX.SFX(nsfx,3,32);
+    MSX.SFX(nsfx,3,1);
 end;
 
 {
