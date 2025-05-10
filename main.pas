@@ -15,7 +15,8 @@ Program DinoCrater;
 {$DEFINE BASICOFF}
 {$DEFINE ROMOFF}
 {$DEFINE NOROMFONT}
-//{$DEFINE QUICK}
+{$DEFINE QUICK}
+
 Uses Atari, RMT;
 
 const

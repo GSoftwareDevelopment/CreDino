@@ -145,7 +145,7 @@ begin
   DL:=Pointer(DL_GAME);
   CHBAS:=Hi(FNT_GAME);
 
-  FCOL[4]:=$00; FCOL[0]:=$1f; FCOL[1]:=$C6; FCOL[2]:=$16; FCOL[3]:=$0F;
+  FCOL[4]:=$00; FCOL[0]:=$16; FCOL[1]:=$c6; FCOL[2]:=$ca; FCOL[3]:=$1e;
   PCOLR[0]:=$04; PCOLR[1]:=$ca;
 
   PMGClear;
@@ -157,7 +157,7 @@ begin
 
   turnOn(@VBL_Game_Screen,@DLI_Game_Screen,%111110);
 
-  GPRIO:=%101000;
+  GPRIO:=%100001; // %101000;
   PMBASE:=HI(PMG_ADDR);
   PMCNTL:=3;
 
@@ -233,7 +233,7 @@ begin
       dec(DINODX)
     else
       inc(DINODX);
-    if (DINOState and (dsJUMP+dsFall)=0) and ((DINOFrm and 1)=0) then
+    if (DINOState and (dsJUMP+dsFall)=0) and (timer[tmHit]=0) and ((DINOFrm and 1)=0) then
       PlaySFX(sfxDINOSTEP);
   end;
 
@@ -264,27 +264,30 @@ begin
 
   if gameState=1 then // -- scena główna
   begin
-    if (DINOState and (dsFall+dsJump)=0) then
-      if (joyFire and not oJoyFire) then // -- skok dinusia
-      begin
-        DINODY:=-8;
-        DINOState:=(DINOState and dsWalk) or dsJump;
-        DINOshadowOfs:=DINOY+12;
-        oJoyFire:=joyFire;
-        playSFX(sfxDINOJUMP);
-        exit;
-      end
-      else
-        oJoyFire:=joyFire;
-
-    if joy2spr[joyDir]<>255 then // -- ruch dinusia
+    if timer[tmHit]=0 then
     begin
-      DINOState:=DINOState and (not (dsWalk+dsNone)) or joy2spr[joyDir];
-      DINODX:=joy2dx[joyDir];
-      if DINOState and (dsFall+dsJump)=0 then
-        DINODY:=joy2dy[joyDir]
-      else
-        DINOJumpVMove:=joy2dy[joyDir];
+      if (DINOState and (dsFall+dsJump)=0) then
+        if (joyFire and not oJoyFire) then // -- skok dinusia
+        begin
+          DINODY:=-8;
+          DINOState:=(DINOState and dsWalk) or dsJump;
+          DINOshadowOfs:=DINOY+12;
+          oJoyFire:=joyFire;
+          playSFX(sfxDINOJUMP);
+          exit;
+        end
+        else
+          oJoyFire:=joyFire;
+
+      if joy2spr[joyDir]<>255 then // -- ruch dinusia
+      begin
+        DINOState:=DINOState and (not (dsWalk+dsNone)) or joy2spr[joyDir];
+        DINODX:=joy2dx[joyDir];
+        if DINOState and (dsFall+dsJump)=0 then
+          DINODY:=joy2dy[joyDir]
+        else
+          DINOJumpVMove:=joy2dy[joyDir];
+      end;
     end;
   end
   else if gameState=2 then // -- scena z kraterem

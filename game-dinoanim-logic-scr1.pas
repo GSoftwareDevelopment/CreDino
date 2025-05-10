@@ -8,7 +8,7 @@ begin // chodzenie góra/dół
     else
       inc(DINODY);
     if DINOY<60 then DINOY:=60;
-    if (gameState=1) and (DINOFrm and 1=0) then
+    if (gameState=1) and (timer[tmHit]=0) and (DINOFrm and 1=0) then
       PlaySFX(sfxDINOSTEP);
   end;
 end

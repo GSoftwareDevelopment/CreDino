@@ -13,7 +13,8 @@ const
   tmPteroAnim = 1;
   tmPteroDly  = 2;
   tmPteroSht  = 3;
-  tmStars     = 3;
+  tmStars     = 4;
+  tmHit       = 4;
 
   sfxDINOSTEP = $14;
   sfxDINOFALL = $11;

@@ -12,7 +12,7 @@ STATUS_ADDR rcdata  'assets/status.dat'
 GOVER_ADDR  rcdata  'assets/gameover.dat'
 CRATER_ADDR rcdata  'assets/crater.dat'
 
-FNT_GAME    rcdata  'assets/game3.fnt'
+FNT_GAME    rcdata  'assets/game4.fnt'
 
 DL_TITLE    rcasm   'title_dlist.a65'
 DL_GAME     rcasm   'game_dlist.a65'

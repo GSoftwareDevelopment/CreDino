@@ -10,20 +10,19 @@ procedure drawPtero; inline;
 begin
   if pteroState=1 then
   begin
-      poke(Adr,$60); inc(Adr);
-      poke(Adr,$61); inc(Adr);
-      poke(Adr,$62); inc(Adr);
-      poke(Adr,$63); inc(Adr);
-      poke(Adr,$0);
+      poke(Adr,$e0); inc(Adr);
+      poke(Adr,$e1); inc(Adr);
+      poke(Adr,$e2); inc(Adr);
+      poke(Adr,$e3); inc(Adr);
   end
   else
   begin
-      poke(Adr,$64); inc(Adr);
-      poke(Adr,$65); inc(Adr);
-      poke(Adr,$66); inc(Adr);
-      poke(Adr,$67); inc(Adr);
-      poke(Adr,$0);
+      poke(Adr,$e4); inc(Adr);
+      poke(Adr,$e5); inc(Adr);
+      poke(Adr,$e6); inc(Adr);
+      poke(Adr,$e7); inc(Adr);
   end;
+  poke(Adr,$0);
 end;
 
 procedure clearPtero; inline;
@@ -36,10 +35,10 @@ end;
 
 procedure drawCrater; inline;
 begin
-  poke(Adr,$2c); inc(Adr,1);
-  poke(Adr,$2d); inc(Adr,1);
-  poke(Adr,$2e); inc(Adr,1);
-  poke(Adr,$2f);
+  poke(Adr,$ac); inc(Adr,1);
+  poke(Adr,$ae); inc(Adr,1);
+  poke(Adr,$b1); inc(Adr,1);
+  poke(Adr,$b2);
 end;
 
 const
