@@ -8,6 +8,7 @@ const
   dsFall      = 8;
   dsJump      = 16;
   dsHeadStars = 32;
+  dsHit       = 64;
 
   tmDinoAnim  = 0;
   tmPteroAnim = 1;

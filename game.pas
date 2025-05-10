@@ -4,28 +4,29 @@
 {$I game_const.pas}
 
 var
-
-  DINOState:Byte;
-  DINOFallDist:Byte;
-  DINOshadowOfs:byte;
-  DINOJumpVMove:Shortint;
+  DINOState:Byte;//          absolute $56;
+  DINOFallDist:Byte;//       absolute $57;
+  DINOshadowOfs:byte;//      absolute $58;
+  DINOJumpVMove:Shortint;//  absolute $59;
 
   joyDir:Byte;
   joyFire,oJoyFire:Boolean;
 
-  pteroState:byte;
-  pteroX:ShortInt;
+  pteroState:byte;//         absolute $5a;
+  pteroX:ShortInt;//         absolute $5b;
 
-  stoneState:Byte;
-  stoneDst:Shortint;
-  shadowOfs:Byte;
+  stoneState:Byte;//         absolute $5c;
+  stoneDst:Shortint;//       absolute $5d;
+  shadowOfs:Byte;//          absolute $5e;
 
 {$I softspr.pas}
 
 procedure prepare_stage;
 var
-  x,y:Byte;
-  i,j:Byte;
+  x:Byte;// absolute $d9;
+  y:Byte;// absolute $da;
+  i:Byte;// absolute $db;
+  j:Byte;// absolute $dc;
 
 begin
   fillchar(pointer(SCREEN_ADDR),21*40+8,$45);
@@ -188,10 +189,9 @@ end;
 }
 procedure DinoAnim;
 var
-  sprBase:Byte;
-  sx,sy:Byte;
-  cnsl:Byte;
-  a1,a2:Boolean;
+  sprBase:Byte absolute $d9;
+  sx:Byte absolute $da;
+  sy:Byte absolute $db;
 
 begin
   if (DINOState and (dsJump+dsFall+dsNone+dsHeadStars)=0) and ((DINODX=0) and (DINODY=0)) then
@@ -202,8 +202,9 @@ begin
 
   if DINOState and dsNone<>0 then exit;
   if timer[tmDinoAnim]>0 then exit;
-
   timer[tmDinoAnim]:=3;
+
+// wspólna logika scen
   if (DINOState and dsHeadStars<>0) then
   begin // gwiazdki nad dinusiem
     if timer[tmStars]<>0 then
@@ -237,16 +238,16 @@ begin
       PlaySFX(sfxDINOSTEP);
   end;
 
-  if gameState=1 then // ekran pierwszy
+  if gameState=1 then // scena pierwsza
   begin
     {$I 'game-dinoanim-logic-scr1.pas'}
   end
   else
-  begin // ekran drugi
+  begin // scena druga
     {$I 'game-dinoanim-logic-scr2.pas'}
   end;
 
-// character collisions
+// kolizja po znakach
   if gameState=1 then
   begin
     {$I 'game-dinocollision-logic-scr1.pas'}
@@ -261,36 +262,34 @@ procedure DinoControl;
 begin
   joyDir:=STICK and $f;
   joyFire:=not STRIG[0];
+  if timer[tmHit]>0 then Exit;
 
-  if gameState=1 then // -- scena główna
+  if gameState=1 then // -- scena pierwsza
   begin
-    if timer[tmHit]=0 then
-    begin
-      if (DINOState and (dsFall+dsJump)=0) then
-        if (joyFire and not oJoyFire) then // -- skok dinusia
-        begin
-          DINODY:=-8;
-          DINOState:=(DINOState and dsWalk) or dsJump;
-          DINOshadowOfs:=DINOY+12;
-          oJoyFire:=joyFire;
-          playSFX(sfxDINOJUMP);
-          exit;
-        end
-        else
-          oJoyFire:=joyFire;
-
-      if joy2spr[joyDir]<>255 then // -- ruch dinusia
+    if (DINOState and (dsFall+dsJump)=0) then
+      if (joyFire and not oJoyFire) then // -- skok dinusia
       begin
-        DINOState:=DINOState and (not (dsWalk+dsNone)) or joy2spr[joyDir];
-        DINODX:=joy2dx[joyDir];
-        if DINOState and (dsFall+dsJump)=0 then
-          DINODY:=joy2dy[joyDir]
-        else
-          DINOJumpVMove:=joy2dy[joyDir];
-      end;
+        DINODY:=-8;
+        DINOState:=(DINOState and dsWalk) or dsJump;
+        DINOshadowOfs:=DINOY+12;
+        oJoyFire:=joyFire;
+        playSFX(sfxDINOJUMP);
+        exit;
+      end
+      else
+        oJoyFire:=joyFire;
+
+    if joy2spr[joyDir]<>255 then // -- ruch dinusia we wszystkich kierunkach
+    begin
+      DINOState:=DINOState and (not (dsWalk+dsNone)) or joy2spr[joyDir];
+      DINODX:=joy2dx[joyDir];
+      if DINOState and (dsFall+dsJump)=0 then
+        DINODY:=joy2dy[joyDir]
+      else
+        DINOJumpVMove:=joy2dy[joyDir];
     end;
   end
-  else if gameState=2 then // -- scena z kraterem
+  else if gameState=2 then // -- scena druga (z kraterem)
   begin
     if (DINOState and dsHeadStars=0) then
     begin
@@ -306,7 +305,8 @@ begin
         else
           oJoyFire:=joyFire;
     end;
-    if joy2spr[joyDir]<>255 then // ruch dinusia
+
+    if joy2spr[joyDir]<>255 then // ruch dinusia tylko w poziomie
     begin
       if DINOState and dsFall=0 then
         DINOState:=DINOState and (not (dsWalk+dsNone)) or joy2spr[joyDir];

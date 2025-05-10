@@ -17,7 +17,7 @@ begin
         DINODX:=0; DINODY:=0;
         playSFX(sfxDINOCOUT);
       end;
-      exit;
+//      exit;
     end
     else // kończy podskok i zaczyna opadać
       DINOState:=DINOState and (not dsJUMP) or dsFall;
