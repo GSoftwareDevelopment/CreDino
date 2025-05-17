@@ -85,3 +85,56 @@ const
 {14}   -3, { Up }
 {15}    0
   );
+
+//
+
+  cactusW:array[0..5] of byte = (1,1,2,2,2,2);
+  cactusH:array[0..5] of byte = (1,1,1,2,2,2);
+
+  cactus_def0:array[0..3] of byte = ($22,$20,$25,$26);
+  cactus_def1:array[0..3] of byte = ($20,$21,$29,$24);
+  cactus_def2:array[0..5] of byte = ($22,$20,$21,$25,$2B,$24);
+  cactus_def3:array[0..8] of byte = ($00,$20,$21,$22,$23,$24,$25,$26,$00);
+  cactus_def4:array[0..8] of byte = ($22,$20,$21,$25,$2A,$24,$00,$27,$00);
+  cactus_def5:array[0..8] of byte = ($22,$20,$00,$25,$28,$21,$00,$29,$24);
+
+  cactusDef:array[0..5] of pointer = (
+    @cactus_def0,
+    @cactus_def1,
+    @cactus_def2,
+    @cactus_def3,
+    @cactus_def4,
+    @cactus_def5
+  );
+
+  treeW:Array[0..3] of byte = (2,2,3,3);
+  treeH:Array[0..3] of Byte = (1,2,2,2);
+
+  tree_def0:Array[0.. 5] of byte = ($0C,$03,$0E,$15,$16,$17);
+  tree_def1:Array[0.. 8] of byte = ($0C,$0D,$0E,$0F,$10,$11,$12,$13,$14);
+  tree_def2:Array[0..11] of byte = ($01,$02,$03,$04,$05,$06,$07,$08,$00,$09,$0A,$0B);
+  tree_def3:Array[0..11] of byte = ($0C,$03,$03,$04,$0F,$10,$07,$08,$00,$13,$0A,$38);
+
+  treeDef:Array[0..3] of pointer = (
+    @tree_def0,
+    @tree_def1,
+    @tree_def2,
+    @tree_def3
+  );
+
+  bushW:Array[0..4] of byte = (1,2,2,3,3);
+
+  bush_def0:Array[0..1] of byte = ($1C,$1F);
+  bush_def1:Array[0..2] of byte = ($18,$1D,$1F);
+  bush_def2:Array[0..2] of byte = ($1C,$1D,$1F);
+  bush_def3:Array[0..3] of byte = ($1C,$1D,$1E,$1F);
+  bush_def4:Array[0..3] of byte = ($18,$19,$1A,$1B);
+
+  bushDef:Array[0..4] of pointer = (
+    @bush_def0,
+    @bush_def1,
+    @bush_def2,
+    @bush_def3,
+    @bush_def4
+  );
+

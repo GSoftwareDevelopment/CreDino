@@ -6,16 +6,28 @@ dl_g
         dta DL_BLANK8
         dta DL_BLANK8
         dta DL_BLANK8 + DL_DLI ; SKY0
-        ; niebo
+        ; pole nieba
         dta DL_MODE_40x24T5 + DL_LMS + DL_DLI, a(SCREEN_ADDR)    ; SKY1   0 -  39
         dta DL_MODE_40x24T5 + DL_LMS + DL_DLI, a(SCREEN_ADDR+44) ; SKY2  44 -  83 (40-43 84-88 hide)
         dta DL_MODE_40x24T5 + DL_LMS + DL_DLI, a(SCREEN_ADDR+88) ; SKY3  88 - 127
         dta DL_MODE_40x24T5 + DL_DLI                             ; SKY4 128 - 167
-        dta DL_MODE_40x24T5 + DL_LMS + DL_DLI, A(SCR_GAME)       ; GND0 168 - 207
-
-        ; ekran gry
+        ; pole gry
+        dta DL_MODE_40x24T5 + DL_LMS + DL_DLI, A(SCR_GAME)       ; GND0_1 168 - 207
+        dta DL_MODE_40x24T5 + DL_DLI ; GND2_3
         dta DL_MODE_40x24T5
-    :14 dta DL_MODE_40x24T5
+        dta DL_MODE_40x24T5 + DL_DLI ; GND4_5
+        dta DL_MODE_40x24T5
+        dta DL_MODE_40x24T5 + DL_DLI ; GND6_7
+        dta DL_MODE_40x24T5
+        dta DL_MODE_40x24T5 + DL_DLI ; GND8_9
+        dta DL_MODE_40x24T5
+        dta DL_MODE_40x24T5 + DL_DLI ; GND10_11
+        dta DL_MODE_40x24T5
+        dta DL_MODE_40x24T5 + DL_DLI ; GND12_13
+        dta DL_MODE_40x24T5
+        dta DL_MODE_40x24T5 + DL_DLI ; GND14_15
+        dta DL_MODE_40x24T5
+        dta DL_MODE_40x24T5 + DL_DLI ; STS0
         dta DL_MODE_40x24T5 + DL_DLI ; STS0
 
         ; status

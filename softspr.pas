@@ -1,38 +1,3 @@
-var
-  ofs:Byte absolute $db;
-  ch1:Byte absolute $dc;
-  ch2:Byte absolute $dd;
-  adr:word absolute $de; // de-df
-  wCactus,hCactus:Shortint;
-  buf:Array[0..8] of byte;
-
-procedure drawPtero; inline;
-begin
-  if pteroState=1 then
-  begin
-      poke(Adr,$e0); inc(Adr);
-      poke(Adr,$e1); inc(Adr);
-      poke(Adr,$e2); inc(Adr);
-      poke(Adr,$e3); inc(Adr);
-  end
-  else
-  begin
-      poke(Adr,$e4); inc(Adr);
-      poke(Adr,$e5); inc(Adr);
-      poke(Adr,$e6); inc(Adr);
-      poke(Adr,$e7); inc(Adr);
-  end;
-  poke(Adr,$0);
-end;
-
-procedure clearPtero; inline;
-begin
-  poke(Adr,$0); inc(Adr);
-  poke(Adr,$0); inc(Adr);
-  poke(Adr,$0); inc(Adr);
-  poke(Adr,$0);
-end;
-
 procedure drawCrater; inline;
 begin
   poke(Adr,$ac); inc(Adr,1);
@@ -41,67 +6,65 @@ begin
   poke(Adr,$b2);
 end;
 
-const
-  ctWidth :array[0..5] of byte = (1,1,2,2,2,2);
-  ctHeight:array[0..5] of byte = (1,1,1,2,2,2);
-
-  cactus_def0:array[0..3] of byte = ($22,$20,$25,$26);
-  cactus_def1:array[0..3] of byte = ($20,$21,$29,$24);
-  cactus_def2:array[0..5] of byte = ($22,$20,$21,$25,$2B,$24);
-  cactus_def3:array[0..8] of byte = ($00,$20,$21,$22,$23,$24,$25,$26,$00);
-  cactus_def4:array[0..8] of byte = ($22,$20,$21,$25,$2A,$24,$00,$27,$00);
-  cactus_def5:array[0..8] of byte = ($22,$20,$00,$25,$28,$21,$00,$29,$24);
-
-  cactusDef:array[0..5] of pointer = (
-    @cactus_def0,
-    @cactus_def1,
-    @cactus_def2,
-    @cactus_def3,
-    @cactus_def4,
-    @cactus_def5
-  );
-
-function testCactusSpace(x,y,cactusType:Byte):boolean;
+function isFree4Tile(x,y:Byte):boolean;
 var
-  j:ShortInt;
+  j:ShortInt absolute $73; // global j
+  buf:Array[0..12] of byte;
 
 begin
-  if (x>17) and (x<23) and (y>10) and (y<14) then exit;
-  wCactus:=ctWidth[cactusType];
-  hCactus:=ctHeight[cactusType];
-  if (x+wCactus)>39 then x:=39-wCactus;
-//  if (y+hCactus)>15 then y:=15-hCactus;
-  ofs:=0; j:=hCactus;
-  adr:=adr+x+(y-wCactus)*40;
+  if ((x>17) and (x<23)) and
+     ((y> 6) and (y<10)) then exit(false);
+
+  if (x+wSpr)>39 then x:=39-wSpr;
+//  if (y+hSpr)>15 then y:=15-hSpr;
+  ofs:=0; j:=hSpr;
+  adr:=adr+x+(y-wSpr)*40;
   repeat
-    move(pointer(adr),@buf+ofs,wCactus+1);
-    inc(ofs,wCactus+1);
+    move(pointer(adr),@buf+ofs,wSpr+1);
+    inc(ofs,wSpr+1);
     inc(adr,40);
     dec(j);
   until j<0;
 
   result:=true;
-  for j:=0 to (wCactus+1)*(hCactus+1)-1 do
+  for j:=0 to ofs-1 do
   begin
     ch1:=buf[j];
-    if ((ch1>=$20) and (ch1<=$2b)) then
+    if ((ch1>=$01) and (ch1<=$2b)) then
       exit(false);
   end;
 end;
 
-procedure drawCactus(x,y,cactusType:Byte); inline;
+procedure getCactusTile(cactusType:Byte); inline;
 begin
-  wCactus:=ctWidth[cactusType];
-  hCactus:=ctHeight[cactusType];
-  if (x+wCactus)>39 then x:=39-wCactus;
-//  if (y+hCactus)>15 then y:=15-hCactus;
-  ofs:=0;
-  adr:=adr+x+(y-wCactus)*40;
+  wSpr:=cactusW[cactusType];
+  hSpr:=cactusH[cactusType];
+  ptr:=word(cactusDef[cactusType]);
+end;
+
+procedure getTreeTile(treeType:Byte); inline;
+begin
+  wSpr:=treeW[treeType];
+  hSpr:=treeH[treeType];
+  ptr:=word(treeDef[treeType]);
+end;
+
+procedure getBushTile(bushType:Byte); inline;
+begin
+  wSpr:=bushW[bushType];
+  hSpr:=0;
+  ptr:=word(bushDef[bushType]);
+end;
+
+procedure drawTile(x,y:Byte); inline;
+begin
+  if (x+wSpr)>39 then x:=39-wSpr;
+  adr:=adr+x+(y-wSpr)*40;
   repeat
-    move(cactusDef[cactusType]+ofs,pointer(adr),wCactus+1);
-    inc(ofs,wCactus+1);
+    move(pointer(ptr),pointer(adr),wSpr+1);
+    inc(ptr,wSpr+1);
     inc(adr,40);
-    dec(hCactus);
-  until hCactus<0;
+    dec(hSpr);
+  until hSpr<0;
 end;
 

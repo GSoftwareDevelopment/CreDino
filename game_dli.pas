@@ -3,6 +3,8 @@ asm
   _regA = $6D;
   _regX = $6E;
   _regY = $6F;
+  HPOSP2 = 53250;
+  HPOSP3 = 53251;
 
 SKY0:
   sta _regA
@@ -24,10 +26,15 @@ SKY0:
 SKY1:
   sta _regA
   stx _regX
+  sty _regY
 
   lda #$84
+  ldx $75
+  ldy $76
   sta WSYNC
   sta COLPF0
+  stx HPOSP2
+  sty HPOSP3
 
   lda #<SKY2
   ldx #>SKY2
@@ -36,6 +43,7 @@ SKY1:
 
   lda _regA
   ldx _regX
+  ldy _regY
   rti
 
 SKY2:
@@ -43,8 +51,10 @@ SKY2:
   stx _regX
 
   lda #$86
+  ldx $77
   sta WSYNC
   sta COLPF0
+  stx HPOSP2
 
   lda #<SKY3
   ldx #>SKY3
@@ -80,8 +90,8 @@ SKY4:
   sta WSYNC
   sta COLPF0
 
-  lda #<GND0
-  ldx #>GND0
+  lda #<GND
+  ldx #>GND
   sta VDSLST
   stx VDSLST+1
 
@@ -89,13 +99,150 @@ SKY4:
   ldx _regX
   rti
 
-GND0:
+// --------------
+GND:
   sta _regA
   stx _regX
 
   lda #$16
   sta WSYNC
   sta COLPF0
+
+  lda #<GND0_1
+  ldx #>GND0_1
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+GND0_1:
+  sta _regA
+  stx _regX
+
+  ldx $78
+  sta WSYNC
+  stx HPOSP3
+
+  lda #<GND2_3
+  ldx #>GND2_3
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+GND2_3:
+  sta _regA
+  stx _regX
+
+  ldx $79
+  sta WSYNC
+  stx HPOSP3
+
+  lda #<GND4_5
+  ldx #>GND4_5
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+GND4_5:
+  sta _regA
+  stx _regX
+
+  ldx $7A
+  sta WSYNC
+  stx HPOSP3
+
+  lda #<GND6_7
+  ldx #>GND6_7
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+GND6_7:
+  sta _regA
+  stx _regX
+
+  ldx $7B
+  sta WSYNC
+  stx HPOSP3
+
+  lda #<GND8_9
+  ldx #>GND8_9
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+GND8_9:
+  sta _regA
+  stx _regX
+
+  ldx $7C
+  sta WSYNC
+  stx HPOSP3
+
+  lda #<GND10_11
+  ldx #>GND10_11
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+GND10_11:
+  sta _regA
+  stx _regX
+
+  ldx $7D
+  sta WSYNC
+  stx HPOSP3
+
+  lda #<GND12_13
+  ldx #>GND12_13
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+GND12_13:
+  sta _regA
+  stx _regX
+
+  ldx $7E
+  sta WSYNC
+  stx HPOSP3
+
+  lda #<GND14_15
+  ldx #>GND14_15
+  sta VDSLST
+  stx VDSLST+1
+
+  lda _regA
+  ldx _regX
+  rti
+
+GND14_15:
+  sta _regA
+  stx _regX
+
+  ldx $7F
+  sta WSYNC
+  stx HPOSP3
 
   lda #<STS0
   ldx #>STS0
@@ -106,17 +253,17 @@ GND0:
   ldx _regX
   rti
 
+// --------------
+
 STS0:
   sta _regA
   stx _regX
 
   lda >FNT_STATUS
-  ldx #$0f
   sta WSYNC
   sta chbase
-  lda #$c8
+  lda #$88
   sta COLPF1
-  stx COLPF0
 
   lda #<STS1
   ldx #>STS1
@@ -132,7 +279,7 @@ STS1:
   stx _regX
 
   ldx #$16
-  lda #$c6
+  lda #$86
   sta WSYNC
   sta COLPF1
   stx COLPF0
@@ -150,7 +297,7 @@ STS2:
   sta _regA
   stx _regX
 
-  lda #$c4
+  lda #$84
   sta WSYNC
   sta COLPF1
 

@@ -4,49 +4,30 @@ const
   _DINO1 = _DINO0+10*16;
   DINOP1:Array[0..9] of word = (_DINO1+ 0*16, _DINO1+ 1*16, _DINO1+ 2*16, _DINO1+ 3*16, _DINO1+ 4*16, _DINO1+ 5*16, _DINO1+ 6*16, _DINO1+ 7*16, _DINO1+ 8*16, _DINO1+ 9*16);
 
-  _STONE2 = _DINO1+10*16;
-  STONEP2:Array[0..9] of word = (_STONE2+ 0*16, _STONE2+ 1*16, _STONE2+ 2*16, _STONE2+ 3*16, _STONE2+ 4*16, _STONE2+ 5*16, _STONE2+ 6*16, _STONE2+ 7*16, _STONE2+ 8*16, _STONE2+ 9*16);
+  _STONE = _DINO1+10*16;
+  STONEP2:Array[0..9] of word = (_STONE+ 0*16, _STONE+ 1*16, _STONE+ 2*16, _STONE+ 3*16, _STONE+ 4*16, _STONE+ 5*16, _STONE+ 6*16, _STONE+ 7*16, _STONE+ 8*16, _STONE+ 9*16);
 
-  _SHADOW4 = _STONE2+10*16;
-  SHADOWP2:Array[0..2] of word = (_SHADOW4+ 0*4, _SHADOW4+ 1*4, _SHADOW4+ 2*4);
+  _SHADOW = _STONE+10*16;
+  SHADOWP2:Array[0..2] of word = (_SHADOW+ 0*4, _SHADOW+ 1*4, _SHADOW+ 2*4);
 
-  _BUG3 = _SHADOW4+3*4;
-  BUGP3:Array[0..1] of word = (_BUG3+ 0*8, _BUG3+ 1*8);
+  _PTERO0 = _SHADOW+3*4;
+  PTEROP0:Array[0..3] of word = (_PTERO0+ 0*8, _PTERO0+ 1*8, _PTERO0+ 2*8, _PTERO0+ 3*8);
+  _PTERO1 = _PTERO0+4*8;
+  PTEROP1:Array[0..3] of word = (_PTERO1+ 0*8, _PTERO1+ 1*8, _PTERO1+ 2*8, _PTERO1+ 3*8);
 
-//  DINOP0:Array[0..9] of word = (SPR_ADDR+   0, SPR_ADDR+  16, SPR_ADDR+  32, SPR_ADDR+  48, SPR_ADDR+  64, SPR_ADDR+  80, SPR_ADDR+  96, SPR_ADDR+ 112, SPR_ADDR+ 128, SPR_ADDR+ 144);
-//  DINOP1:Array[0..9] of word = (SPR_ADDR+ 160, SPR_ADDR+ 176, SPR_ADDR+ 192, SPR_ADDR+ 208, SPR_ADDR+ 224, SPR_ADDR+ 240, SPR_ADDR+ 256, SPR_ADDR+ 272, SPR_ADDR+ 288, SPR_ADDR+ 304);
-
-//  STONEP2:Array[0..1] of word = (SPR_ADDR+ 320, SPR_ADDR+ 336);
-
-//  BUGP3: Array[0..1] of word = (SPR_ADDR+ 352, SPR_ADDR+ 360);
-
-//  SHADOWP2:Array[0..2] of word = (SPR_ADDR+ 368, SPR_ADDR+ 372, SPR_ADDR+ 376);
+  _BUG1 = _PTERO1+4*8;
+  BUGP3:Array[0..1] of word = (_BUG1+ 0*8, _BUG1+ 1*8);
 
 var
-  PCOLR:Array[0..3] of byte     absolute 704;
-  SDMCTL:Byte                   absolute 559;
-  GPRIO:Byte                    absolute 623;
-  [Volatile] SIZEP:Array[0..3] of byte absolute 53256;
-  [Volatile] HPOSP:Array[0..3] of byte absolute 53248;
-  [Volatile] HPOSM:Array[0..3] of byte absolute 53252;
-  [Volatile] SIZEM:Byte         absolute 53260;
-
-  [Volatile] PMBASE:Byte        absolute 54279;
-  [Volatile] PMCNTL:Byte        absolute 53277;
-
-  _PL0:Array[0..255] of byte    absolute PMG_ADDR+ 1024;
-  _PL1:Array[0..255] of byte    absolute PMG_ADDR+ 1280;
-  _PL2:Array[0..255] of byte    absolute PMG_ADDR+ 1536;
-  _PL3:Array[0..255] of byte    absolute PMG_ADDR+ 1792;
-
-  DINOX:Byte absolute $56;
-  DINOY:Byte absolute $57;
-  DINODX:ShortInt;
-  DINODY:Shortint;
-  oDINOY:Byte;
-  DINOFrm:Byte;
-  oDINOFrm:Byte;
-  outDINOX, outDINOY:Byte;
+  DINOX:Byte      absolute $60;
+  DINOY:Byte      absolute $01;
+  DINODX:ShortInt absolute $62;
+  DINODY:Shortint absolute $63;
+  oDINOY:Byte     absolute $64;
+  DINOFrm:Byte    absolute $65;
+  oDINOFrm:Byte   absolute $66;
+  outDINOX:Byte;
+  outDINOY:Byte;
 
   STONEX:Byte;
   STONEY:Byte;
@@ -55,6 +36,8 @@ var
   oSTONEY:Byte;
   STONEFrm:Byte;
   oSTONEFrm:Byte;
+
+  MultiP:Array[0..9] of byte absolute $75;
 
 procedure putDINO;
 var
@@ -143,7 +126,7 @@ var
   z:Byte;
 
 begin
-  HPOSP[2]:=STONEX;
+  MultiP[2]:=STONEX;
   if oSTONEY<>STONEY then
   begin
     if STONEY=255 then
@@ -223,6 +206,7 @@ begin
     oSTONEY:=STONEY;
   end;
 end;
+
 
 procedure PMGClear; Assembler;
 asm

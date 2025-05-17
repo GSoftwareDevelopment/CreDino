@@ -17,7 +17,7 @@ Program DinoCrater;
 {$DEFINE NOROMFONT}
 {$DEFINE QUICK}
 
-Uses Atari, RMT;
+Uses {Atari, }RMT;
 
 const
 {$I memory.inc}
@@ -30,14 +30,17 @@ var
   msx:TRMT;
   VDSLST:Pointer                absolute 512;
   DL:Pointer                    absolute 560;
+  SDMCTL:Byte                   absolute 559;
 
-  STICK:byte                    absolute 54016;
-  STRIG:Array[0..3] of boolean  absolute 53264;
-
+  GPRIO:Byte                    absolute 623;
+  PCOLR:Array[0..3] of byte     absolute 704;
   FCOL:Array[0..4] of byte      absolute 708;
 
-  KEYB:Byte                     absolute 764;
   CHBAS:Byte                    absolute 756;
+  KEYB:Byte                     absolute 764;
+
+  [Volatile] STICK:byte                    absolute 54016;
+  [Volatile] STRIG:Array[0..3] of boolean  absolute 53264;
 
   [Volatile] COLPF0:Byte        absolute 53270;
   [Volatile] COLPF1:Byte        absolute 53271;
@@ -45,9 +48,23 @@ var
   [Volatile] COLPF3:Byte        absolute 53273;
   [Volatile] COLBK:Byte         absolute 53274;
   [Volatile] RAND:Byte          absolute 53770;
+  [Volatile] CONSOL:Byte        absolute 53279;
   [Volatile] IRQST:Byte         absolute 54286;
   [Volatile] CHBASE:Byte        absolute 54281;
   [Volatile] WSYNC:Byte         absolute 54282;
+
+  [Volatile] SIZEP:Array[0..3] of byte absolute 53256;
+  [Volatile] HPOSP:Array[0..3] of byte absolute 53248;
+  [Volatile] HPOSM:Array[0..3] of byte absolute 53252;
+  [Volatile] SIZEM:Byte         absolute 53260;
+
+  [Volatile] PMBASE:Byte        absolute 54279;
+  [Volatile] PMCNTL:Byte        absolute 53277;
+
+  _PL0:Array[0..255] of byte    absolute PMG_ADDR+ 1024;
+  _PL1:Array[0..255] of byte    absolute PMG_ADDR+ 1280;
+  _PL2:Array[0..255] of byte    absolute PMG_ADDR+ 1536;
+  _PL3:Array[0..255] of byte    absolute PMG_ADDR+ 1792;
 
   timer:Array[0..6] of byte     absolute $F4;
 
@@ -62,6 +79,7 @@ var
 {$I game.pas}
 
 begin
+  fillchar(pointer($50),32,0);
   msx.player:=pointer(rmt_player);
   msx.modul:=pointer(rmt_modul);
   startVol:=false;

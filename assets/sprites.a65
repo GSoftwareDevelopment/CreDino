@@ -118,34 +118,63 @@ SPR_9_FRM_2
   dta $00, $00, $50, $00
 
 
+; -- PTERO
+; SPRITE 0
+; FRAME 0
+SPR_3_FRM_0
+  dta $00, $00, $00, $10, $39, $5f, $ff, $00
+; FRAME 1
+SPR_3_FRM_1
+  dta $00, $00, $10, $38, $5f, $ff, $01, $00
+; FRAME 2
+SPR_3_FRM_2
+  dta $02, $13, $3b, $5b, $ff, $07, $03, $01
+; FRAME 3
+SPR_3_FRM_3
+  dta $00, $00, $10, $3b, $5f, $ff, $01, $00
+
+; SPRITE 1
+; FRAME 0
+SPR_4_FRM_0
+  dta $00, $00, $00, $03, $fc, $f0, $fc, $60
+; FRAME 1
+SPR_4_FRM_1
+  dta $00, $00, $00, $00, $ff, $f0, $f0, $0c
+; FRAME 2
+SPR_4_FRM_2
+  dta $00, $00, $c0, $f0, $ff, $f8, $f0, $ec
+; FRAME 3
+SPR_4_FRM_3
+  dta $00, $00, $00, $ff, $f8, $f0, $f0, $0c
+
 ; -- ANT
 
 ; SPRITE
 ; FRAME 0
-SPR_3_FRM_0
+SPR_5_FRM_0
   dta $00, $c0, $20, $bb, $f6, $7f, $1d, $22
 ; FRAME 1
-SPR_3_FRM_1
+SPR_5_FRM_1
   dta $80, $40, $20, $bb, $f6, $7f, $1d, $09
 ; FRAME 2
-SPR_3_FRM_2
+SPR_5_FRM_2
   dta $00, $00, $01, $37, $5b, $7f, $6e, $91
 ; FRAME 3
-SPR_3_FRM_3
+SPR_5_FRM_3
   dta $00, $00, $01, $37, $5b, $7f, $6e, $24
 
 ; MISSILES
 ; FRAME 0
-MIS_3_FRM_0
+MIS_5_FRM_0
   dta $00, $00, $00, $00, $08, $08, $08, $04
 ; FRAME 1
-MIS_3_FRM_1
+MIS_5_FRM_1
   dta $00, $00, $00, $00, $08, $08, $08, $00
 ; FRAME 2
-MIS_3_FRM_2
+MIS_5_FRM_2
   dta $00, $0c, $00, $04, $0c, $08, $00, $00
 ; FRAME 3
-MIS_3_FRM_3
+MIS_5_FRM_3
   dta $04, $08, $00, $04, $0c, $08, $00, $00
 
 
@@ -153,28 +182,28 @@ MIS_3_FRM_3
 
 ; SPRITE
 ; FRAME 0
-SPR_4_FRM_0
+SPR_6_FRM_0
   dta $00, $00, $0a, $36, $78, $3c, $00, $00
 ; FRAME 1
-SPR_4_FRM_1
+SPR_6_FRM_1
   dta $18, $14, $00, $30, $78, $3c, $00, $00
 ; FRAME 2
-SPR_4_FRM_2
+SPR_6_FRM_2
   dta $00, $00, $50, $6c, $1e, $3c, $00, $00
 ; FRAME 3
-SPR_4_FRM_3
+SPR_6_FRM_3
   dta $18, $28, $00, $0c, $1e, $3c, $00, $00
 
 ; MISSILES
 ; FRAME 0
-MIS_4_FRM_0
+MIS_6_FRM_0
   dta $00, $00, $00, $00, $00, $00, $00, $00
 ; FRAME 1
-MIS_4_FRM_1
+MIS_6_FRM_1
   dta $00, $00, $00, $00, $00, $00, $00, $00
 ; FRAME 2
-MIS_4_FRM_2
+MIS_6_FRM_2
   dta $00, $00, $00, $00, $00, $00, $00, $00
 ; FRAME 3
-MIS_4_FRM_3
+MIS_6_FRM_3
   dta $00, $00, $00, $00, $00, $00, $00, $00

@@ -4,10 +4,17 @@
 {$I game_const.pas}
 
 var
-  DINOState:Byte;//          absolute $56;
-  DINOFallDist:Byte;//       absolute $57;
-  DINOshadowOfs:byte;//      absolute $58;
-  DINOJumpVMove:Shortint;//  absolute $59;
+  ofs:Byte absolute $db;
+  ch1:Byte absolute $dc;
+  ch2:Byte absolute $dd;
+  adr:word absolute $50; // 50,51
+  ptr:word absolute $52; // 52,53
+  wSpr,hSpr:Shortint;
+
+  DINOState:Byte          absolute $5a;
+  DINOFallDist:Byte       absolute $5b;
+  DINOshadowOfs:Byte      absolute $5c;
+  DINOJumpVMove:Shortint  absolute $5d;
 
   joyDir:Byte;
   joyFire,oJoyFire:Boolean;
@@ -19,20 +26,24 @@ var
   stoneDst:Shortint;//       absolute $5d;
   shadowOfs:Byte;//          absolute $5e;
 
+  x:Byte absolute $70;
+  y:Byte absolute $71;
+  i:Byte absolute $72;
+  j:Byte absolute $73;
+  k:Byte absolute $74;
+
 {$I softspr.pas}
 
 procedure prepare_stage;
 var
-  x:Byte;// absolute $d9;
-  y:Byte;// absolute $da;
-  i:Byte;// absolute $db;
-  j:Byte;// absolute $dc;
+  tile:Byte absolute $74; // global k
 
 begin
   fillchar(pointer(SCREEN_ADDR),21*40+8,$45);
   fillchar(pointer(SC2_TITLE),5*40+8,$0);
   fillchar(pointer(SC2_TITLE)+5*40+8,16*40+8,$0);
-  for j:=$3a to $3f do
+
+  for tile:=$3a to $3f do
   begin
     for i:=0 to 9 do
     begin
@@ -42,29 +53,51 @@ begin
         adr:=SC2_TITLE+208+x+y*40;
       until peek(adr)=0;
 
-      poke(adr,j);
+      poke(adr,tile);
     end;
   end;
   for i:=0 to 9 do
   begin
-    j:=RANDOM(6);
+    tile:=RANDOM(6);
+    getCactusTile(tile);
     repeat
       x:=RANDOM(40);
       y:=RANDOM(15);
-      adr:=sc2_title+248;
-    until testCactusSpace(x,y,j);
-    adr:=sc2_title+248;
-    drawCactus(x,y,j);
+      adr:=sc2_title+288;
+    until isFree4Tile(x,y);
+    adr:=sc2_title+288; drawTile(x,y);
   end;
+
+  for i:=0 to 5 do
+  begin
+    tile:=RANDOM(4);
+    getTreeTile(tile);
+    repeat
+      x:=RANDOM(40);
+      y:=RANDOM(15);
+      adr:=sc2_title+288;
+    until isFree4Tile(x,y);
+    adr:=sc2_title+288; drawTile(x,y);
+  end;
+
+  for i:=0 to 15 do
+  begin
+    tile:=RANDOM(5);
+    getBushTile(tile);
+    repeat
+      x:=RANDOM(40);
+      y:=RANDOM(15);
+      adr:=sc2_title+328;
+    until isFree4Tile(x,y);
+    adr:=sc2_title+328; drawTile(x,y);
+  end;
+
 end;
 
 procedure game_fadeIn;
 var
-  j:word absolute $d9; // d9-da
-  v:byte absolute $db;
-  k:Byte absolute $dc;
-  i:Byte absolute $dd;
-  adr:word absolute $de; // de-df
+  j:word absolute $52; // global ptr
+  v:byte absolute $dd; // global ch2;
 
 begin
   i:=0;
@@ -101,11 +134,8 @@ end;
 
 procedure game_fadeOut;
 var
-  j:word absolute $d9; // d9-da
-  v:byte absolute $db;
-  k:Byte absolute $dc;
-  i:Byte absolute $dd;
-  adr:word absolute $de; // de-df
+  j:word absolute $52; // global ptr
+  v:byte absolute $dd; // global ch2;
 
 begin
   i:=0;
@@ -147,7 +177,7 @@ begin
   CHBAS:=Hi(FNT_GAME);
 
   FCOL[4]:=$00; FCOL[0]:=$16; FCOL[1]:=$c6; FCOL[2]:=$ca; FCOL[3]:=$1e;
-  PCOLR[0]:=$04; PCOLR[1]:=$ca;
+  PCOLR[0]:=$04; PCOLR[1]:=$aa;
 
   PMGClear;
 
@@ -189,9 +219,8 @@ end;
 }
 procedure DinoAnim;
 var
-  sprBase:Byte absolute $d9;
-  sx:Byte absolute $da;
-  sy:Byte absolute $db;
+  sx:Byte absolute $70; {global x}
+  sy:Byte absolute $71; {global y}
 
 begin
   if (DINOState and (dsJump+dsFall+dsNone+dsHeadStars)=0) and ((DINODX=0) and (DINODY=0)) then
@@ -320,15 +349,25 @@ procedure PteroAnim;
 begin
   if (timer[tmPteroAnim]=0) and (pteroState<>255) then
   begin
-    timer[tmPteroAnim]:=7;
+    timer[tmPteroAnim]:=3;
     Adr:=SCREEN_ADDR+40+PteroX;
-    drawPtero;
-    inc(pteroState,1); if pteroState=4 then pteroState:=1;
+    i:=pteroState-1;
+    Move(Pointer(PteroP0[i]),_PL2[40],8);
+    Move(Pointer(PteroP1[i]),_PL3[40],8);
+    j:=32+pteroX*2;
+    MultiP[0]:=j;
+    MultiP[1]:=j+8;
+//    drawPtero;
+    if pteroX and 1=0 then
+    begin
+      inc(pteroState,1); if pteroState>4 then pteroState:=1;
+    end;
     if pteroX>0 then
       dec(pteroX) // ptero przesówa się w lewo
     else
     begin // ptero kończy swój lot
-      clearPtero;
+      MultiP[0]:=0;
+      MultiP[1]:=0;
       pteroState:=255; // status ptero wyłączony
 {$IFNDEF QUICK}
       timer[tmPteroDly]:=25+Random(200); // losowanie nowego czasu na pokazanie się ptero
@@ -340,20 +379,17 @@ begin
 end;
 
 procedure pteroControl;
-var
-  a:byte;
-
 begin
   if (pteroState=255) then // gdy wyłączony
   begin
     if timer[tmPteroDly]=0 then // gdy czas pokazania ptero upłyną, wylosuj parametry ptero
     begin
       pteroState:=0; // status ptero w locie
-      pteroX:=40; // pozycja startowa prawy margines ekranu
+      pteroX:=88; // pozycja startowa prawy margines ekranu
       if gameState=1 then
       begin
-        a:=Random(25);
-        timer[tmPteroSht]:=a*4; // czas zrzutu
+        k:=Random(25);
+        timer[tmPteroSht]:=k*4; // czas zrzutu
         stoneDst:=15+Random(20); // odległość zrzutu
         stoneState:=0; // status zrzutu oczekuje
       end
@@ -366,17 +402,14 @@ begin
 end;
 
 procedure stoneControl;
-var
-  n:Byte;
-
 begin
   if stoneState=255 then exit; // pomiń, gdy status zrzutu wyłączony
   if timer[tmPteroSht]<>0 then exit; // pomiń, gdy czas zrzutu nie jest osiągnięty
 
   if (stoneState=0) then // jeżeli status zrzutu oczekuje
   begin // ustal parametry
-    STONEX:=40+PteroX*4;
-    STONEY:=40;
+    STONEX:=40+PteroX*2;
+    STONEY:=48;
     stoneState:=1;
     PlaySFX(sfxPTERODROP);
     shadowOfs:=48+stoneDst*4;
@@ -404,10 +437,10 @@ begin
     STONEY:=STONEY+4;
 
     // rysuj cień
-    if stoneDst>10 then n:=0
-    else if stoneDst>5 then n:=1
-    else if stoneDst>2 then n:=2;
-    adr:=SHADOWP2[n];
+    if stoneDst>10 then k:=0
+    else if stoneDst>5 then k:=1
+    else if stoneDst>2 then k:=2;
+    adr:=SHADOWP2[k];
     move(pointer(adr),_PL2[shadowOfs],4);
 
     timer[tmPteroSht]:=4; // ustaw timer szybkości zrzutu
@@ -415,9 +448,6 @@ begin
 end;
 
 procedure Over_Init;
-var
-  i:Byte;
-
 begin
   KEYB:=255;
   STONEY:=255; DINOX:=0;
@@ -435,7 +465,6 @@ begin
 end;
 
 procedure game_loop;
-
 begin
 {$IFNDEF QUICK}
   msx.Init($c);
