@@ -8,6 +8,7 @@ begin
      ((ch2>=$ac) and (ch2<=$b2)) then
   begin // wpadnięcie do krateru
     gameState:=2;
+    ResetBugs;
     poke(CRATER_ADDR+15*40+20,$5d);
     poke(CRATER_ADDR+15*40+21,$5e);
     poke(CRATER_ADDR+15*40+22,$5f);

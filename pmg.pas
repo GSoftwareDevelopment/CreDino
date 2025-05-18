@@ -8,7 +8,7 @@ const
   STONEP2:Array[0..9] of word = (_STONE+ 0*16, _STONE+ 1*16, _STONE+ 2*16, _STONE+ 3*16, _STONE+ 4*16, _STONE+ 5*16, _STONE+ 6*16, _STONE+ 7*16, _STONE+ 8*16, _STONE+ 9*16);
 
   _SHADOW = _STONE+10*16;
-  SHADOWP2:Array[0..2] of word = (_SHADOW+ 0*4, _SHADOW+ 1*4, _SHADOW+ 2*4);
+  SHADOW:Array[0..2] of word = (_SHADOW+ 0*4, _SHADOW+ 1*4, _SHADOW+ 2*4);
 
   _PTERO0 = _SHADOW+3*4;
   PTEROP0:Array[0..3] of word = (_PTERO0+ 0*8, _PTERO0+ 1*8, _PTERO0+ 2*8, _PTERO0+ 3*8);
@@ -16,7 +16,14 @@ const
   PTEROP1:Array[0..3] of word = (_PTERO1+ 0*8, _PTERO1+ 1*8, _PTERO1+ 2*8, _PTERO1+ 3*8);
 
   _BUG1 = _PTERO1+4*8;
-  BUGP3:Array[0..1] of word = (_BUG1+ 0*8, _BUG1+ 1*8);
+  ANTP:Array[0..3] of word = (_BUG1+ 0*8, _BUG1+ 1*8, _BUG1+ 2*8, _BUG1+ 3*8);
+  _BUG2 = _BUG1+4*8;
+  ANTM:Array[0..3] of word = (_BUG2+ 0*8, _BUG2+ 1*8, _BUG2+ 2*8, _BUG2+ 3*8);
+
+  _BUG3 = _BUG2+4*8;
+  FLYP:Array[0..3] of word = (_BUG3+ 0*12, _BUG3+ 1*12, _BUG3+ 2*12, _BUG3+ 3*12);
+  _BUG4 = _BUG3+4*12;
+  FLYM:Array[0..3] of word = (_BUG4+ 0*12, _BUG4+ 1*12, _BUG4+ 2*12, _BUG4+ 3*12);
 
 var
   DINOX:Byte      absolute $60;
@@ -217,6 +224,7 @@ asm
     sta 53250
     sta 53251
   lzero:
+    sta adr._MIS,y
     sta adr._PL0,y
     sta adr._PL1,y
     sta adr._PL2,y

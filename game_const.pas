@@ -16,6 +16,9 @@ const
   tmPteroSht  = 3;
   tmStars     = 4;
   tmHit       = 4;
+  tmBugsAnim  = 5;
+  tmBugsDly   = 6;
+  tmFire      = 9;
 
   sfxDINOSTEP = $14;
   sfxDINOFALL = $11;

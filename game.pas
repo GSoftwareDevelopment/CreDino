@@ -26,6 +26,9 @@ var
   stoneDst:Shortint;//       absolute $5d;
   shadowOfs:Byte;//          absolute $5e;
 
+  bugX:Array[0..7] of Byte absolute $78;    // 0 is not active bug
+  bugType:Array[0..7] of Byte;
+
   x:Byte absolute $70;
   y:Byte absolute $71;
   i:Byte absolute $72;
@@ -34,11 +37,30 @@ var
 
 {$I softspr.pas}
 
+procedure pushRandomBug;
+begin
+  j:=RANDOM(2);
+  case j of
+    0: Begin bugX[i]:=200; bugType[i]:=RANDOM(2)*4; end;
+    1: begin bugX[i]:=30; bugType[i]:=2+RANDOM(2)*4; end;
+  end;
+end;
+
+procedure ResetBugs;
+begin
+  for i:=0 to 7 do
+  begin
+    bugX[i]:=0;
+    bugType[i]:=0;
+  end;
+end;
+
 procedure prepare_stage;
 var
   tile:Byte absolute $74; // global k
 
 begin
+  ResetBugs;
   fillchar(pointer(SCREEN_ADDR),21*40+8,$45);
   fillchar(pointer(SC2_TITLE),5*40+8,$0);
   fillchar(pointer(SC2_TITLE)+5*40+8,16*40+8,$0);
@@ -128,6 +150,8 @@ begin
         poke(adr,Peek(SC2_TITLE+j));
       inc(adr);
     end;
+    v:=i shr 3; if v>6 then v:=6;
+    poke($5f,$10+v);
     i:=k;
   until i>69;
 end;
@@ -159,15 +183,18 @@ begin
       inc(adr);
     end;
     adr:=SCREEN_ADDR+88;
-    for j:=80 to 959 do
+    for j:=80 to 959-3*40 do
     begin
       v:=peek(FAD_TITLE+j);
       if (v>=i) and (v<k) then
         poke(adr,$45);
       inc(adr);
     end;
+    v:=i shr 3; if v>6 then v:=6;
+    poke($5f,$16-v);
     i:=k;
   until i>69;
+  poke($5f,$00);
 end;
 
 procedure init_game;
@@ -204,6 +231,7 @@ begin
   stoneDst:=0;
 
   gameState:=1;
+
 end;
 
 {
@@ -288,25 +316,48 @@ begin
 end;
 
 procedure DinoControl;
+var
+  firePressed:Boolean absolute $56;
+  fireReleased:Boolean absolute $57;
+
 begin
   joyDir:=STICK and $f;
   joyFire:=not STRIG[0];
+
+  if (joyFire<>oJoyFire) then
+  begin
+    if joyFire then
+    begin
+      if timer[tmFire]=0 then
+        timer[tmFire]:=10;
+      firePressed:=True;
+    end
+    else
+      fireReleased:=True;
+
+
+    oJoyFire:=joyFire;
+  end
+  else
+  if timer[tmFire]=0 then
+  begin
+    firePressed:=False;
+    fireReleased:=False;
+  end;
+
   if timer[tmHit]>0 then Exit;
 
   if gameState=1 then // -- scena pierwsza
   begin
     if (DINOState and (dsFall+dsJump)=0) then
-      if (joyFire and not oJoyFire) then // -- skok dinusia
+      if (fireReleased) and (timer[tmFire]>0) then // -- skok dinusia
       begin
         DINODY:=-8;
         DINOState:=(DINOState and dsWalk) or dsJump;
         DINOshadowOfs:=DINOY+12;
-        oJoyFire:=joyFire;
         playSFX(sfxDINOJUMP);
         exit;
-      end
-      else
-        oJoyFire:=joyFire;
+      end;
 
     if joy2spr[joyDir]<>255 then // -- ruch dinusia we wszystkich kierunkach
     begin
@@ -323,7 +374,7 @@ begin
     if (DINOState and dsHeadStars=0) then
     begin
       if (DINOState and (dsFall+dsJump)=0) then
-        if (joyFire and not oJoyFire) then // -- skok dinusia
+        if (fireReleased) and (timer[tmFire]>0) then // -- skok dinusia
         begin
           DINODY:=-8;
           DINOState:=(DINOState and dsWalk) or dsJump;
@@ -412,7 +463,7 @@ begin
     STONEY:=48;
     stoneState:=1;
     PlaySFX(sfxPTERODROP);
-    shadowOfs:=48+stoneDst*4;
+    shadowOfs:=56+stoneDst*4;
   end
   else
   begin
@@ -440,18 +491,86 @@ begin
     if stoneDst>10 then k:=0
     else if stoneDst>5 then k:=1
     else if stoneDst>2 then k:=2;
-    adr:=SHADOWP2[k];
+    adr:=SHADOW[k];
     move(pointer(adr),_PL2[shadowOfs],4);
 
     timer[tmPteroSht]:=4; // ustaw timer szybkości zrzutu
   end;
 end;
 
+procedure BugAnim;
+var
+  _bugX:Byte;
+  _bug:Byte;
+  _bugType:Byte;
+  _bugDir:Byte;
+
+begin
+  if gameState=2 then Exit;
+  if timer[tmBugsAnim]=0 then
+  begin
+    timer[tmBugsAnim]:=2;
+    for i:=0 to 7 do
+    begin
+      _bugX:=BugX[i];
+      if _bugX>0 then
+      begin
+        _bug:=bugType[i] xor 1;
+        bugType[i]:=_bug;
+        _bugType:=_bug shr 2;
+        _bugDir:=_bug and 2;
+        _bug:=_bug and 3;
+        j:=72+i*16;
+        case _bugType of
+          0: // ant
+          begin
+            inc(j,8);
+            move(pointer(ANTP[_bug]),_PL3[j],8);
+            move(pointer(ANTM[_bug]),_MIS[j],8);
+          end;
+          1: // fly
+          begin
+            inc(j,4);
+            move(pointer(FLYP[_bug]),_PL3[j],12);
+            move(pointer(FLYM[_bug]),_MIS[j],12);
+          end;
+        end;
+        if _bugDir=0 then
+          dec(_bugX)
+        else
+          inc(_bugX);
+        bugX[i]:=_bugX;
+      end;
+    end;
+
+  end;
+end;
+
+procedure bugControl;
+begin
+  if gameState=2 then Exit;
+  if timer[tmBugsDly]=0 then
+  begin
+    timer[tmBugsDly]:=random(50);
+    i:=RANDOM(8);
+    if bugX[i]=0 then
+    begin
+      j:=72+i*16;
+      fillchar(_PL3[j],16,0);
+      fillchar(_MIS[j],16,0);
+      pushRandomBug;
+    end;
+  end;
+end;
+
+//
+
 procedure Over_Init;
 begin
   KEYB:=255;
   STONEY:=255; DINOX:=0;
   PMGClear;
+  poke($5f,$00);
 
   dpoke(DL_STAT_ADDR,GOVER_ADDR);
 {$IFNDEF QUICK}
@@ -469,8 +588,10 @@ begin
 {$IFNDEF QUICK}
   msx.Init($c);
   game_fadeIn;
+  poke($5f,$16);
   wait(110);
 {$ELSE}
+  poke($5f,$16);
   msx.Init($d);
   move(pointer(SC2_TITLE),pointer(SCREEN_ADDR),21*40+8);
 {$ENDIF}
@@ -482,6 +603,8 @@ begin
 {$ENDIF}
 
   repeat
+    BugAnim;
+    BugControl;
     DinoAnim;
     PteroAnim;
     DinoControl;

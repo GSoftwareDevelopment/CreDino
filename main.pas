@@ -61,12 +61,13 @@ var
   [Volatile] PMBASE:Byte        absolute 54279;
   [Volatile] PMCNTL:Byte        absolute 53277;
 
+  _MIS:Array[0..255] of byte    absolute PMG_ADDR+  768;
   _PL0:Array[0..255] of byte    absolute PMG_ADDR+ 1024;
   _PL1:Array[0..255] of byte    absolute PMG_ADDR+ 1280;
   _PL2:Array[0..255] of byte    absolute PMG_ADDR+ 1536;
   _PL3:Array[0..255] of byte    absolute PMG_ADDR+ 1792;
 
-  timer:Array[0..6] of byte     absolute $F4;
+  timer:Array[0..9] of byte     absolute $F2;
 
   gameState:Byte;
   startVol:Boolean;

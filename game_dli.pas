@@ -5,6 +5,7 @@ asm
   _regY = $6F;
   HPOSP2 = 53250;
   HPOSP3 = 53251;
+  HPOSM1 = 53255;
 
 SKY0:
   sta _regA
@@ -90,24 +91,6 @@ SKY4:
   sta WSYNC
   sta COLPF0
 
-  lda #<GND
-  ldx #>GND
-  sta VDSLST
-  stx VDSLST+1
-
-  lda _regA
-  ldx _regX
-  rti
-
-// --------------
-GND:
-  sta _regA
-  stx _regX
-
-  lda #$16
-  sta WSYNC
-  sta COLPF0
-
   lda #<GND0_1
   ldx #>GND0_1
   sta VDSLST
@@ -117,13 +100,19 @@ GND:
   ldx _regX
   rti
 
+// --------------
+
 GND0_1:
   sta _regA
   stx _regX
 
+  lda #$16
   ldx $78
   sta WSYNC
+  sta COLPF0
   stx HPOSP3
+  :8 inx
+  stx HPOSM1
 
   lda #<GND2_3
   ldx #>GND2_3
@@ -141,6 +130,8 @@ GND2_3:
   ldx $79
   sta WSYNC
   stx HPOSP3
+  :8 inx
+  stx HPOSM1
 
   lda #<GND4_5
   ldx #>GND4_5
@@ -158,6 +149,8 @@ GND4_5:
   ldx $7A
   sta WSYNC
   stx HPOSP3
+  :8 inx
+  stx HPOSM1
 
   lda #<GND6_7
   ldx #>GND6_7
@@ -175,6 +168,8 @@ GND6_7:
   ldx $7B
   sta WSYNC
   stx HPOSP3
+  :8 inx
+  stx HPOSM1
 
   lda #<GND8_9
   ldx #>GND8_9
@@ -192,6 +187,8 @@ GND8_9:
   ldx $7C
   sta WSYNC
   stx HPOSP3
+  :8 inx
+  stx HPOSM1
 
   lda #<GND10_11
   ldx #>GND10_11
@@ -209,6 +206,8 @@ GND10_11:
   ldx $7D
   sta WSYNC
   stx HPOSP3
+  :8 inx
+  stx HPOSM1
 
   lda #<GND12_13
   ldx #>GND12_13
@@ -226,6 +225,8 @@ GND12_13:
   ldx $7E
   sta WSYNC
   stx HPOSP3
+  :8 inx
+  stx HPOSM1
 
   lda #<GND14_15
   ldx #>GND14_15
@@ -243,6 +244,8 @@ GND14_15:
   ldx $7F
   sta WSYNC
   stx HPOSP3
+  :8 inx
+  stx HPOSM1
 
   lda #<STS0
   ldx #>STS0
@@ -260,10 +263,12 @@ STS0:
   stx _regX
 
   lda >FNT_STATUS
+  ldx $5F
   sta WSYNC
   sta chbase
   lda #$88
   sta COLPF1
+  stx COLPF0
 
   lda #<STS1
   ldx #>STS1
@@ -278,11 +283,9 @@ STS1:
   sta _regA
   stx _regX
 
-  ldx #$16
   lda #$86
   sta WSYNC
   sta COLPF1
-  stx COLPF0
 
   lda #<STS2
   ldx #>STS2

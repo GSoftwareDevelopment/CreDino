@@ -41,7 +41,7 @@ begin // podskok
 
         if DINOshadowOfs<=196 then // cień dinusia
         begin
-          adr:=SHADOWP2[0];
+          adr:=SHADOW[0];
           move(pointer(adr),_PL0[DINOshadowOfs],4);
         end;
         exit;
@@ -51,7 +51,7 @@ begin // podskok
         DINOState:=DINOState and (not dsJUMP) or dsFall;
         if DINOshadowOfs<=196 then // cień dinusia
         begin
-          adr:=SHADOWP2[0];
+          adr:=SHADOW[0];
           move(pointer(adr),_PL0[DINOshadowOfs],4);
         end;
       end;
@@ -67,7 +67,7 @@ begin // podskok
       inc(DINOY,DINODY);
       if DINOshadowOfs<=196 then // cień dinusia
       begin
-        adr:=SHADOWP2[0];
+        adr:=SHADOW[0];
         move(pointer(adr),_PL0[DINOshadowOfs],4);
       end;
     end

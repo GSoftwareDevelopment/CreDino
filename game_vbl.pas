@@ -16,7 +16,7 @@ begin
       lda #0
       sta atract
 
-      ldx #6
+      ldx #9
   tmLoop:
       lda adr.timer,x
       beq tmNext
