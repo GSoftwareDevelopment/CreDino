@@ -26,6 +26,7 @@ const
   FLYM:Array[0..3] of word = (_BUG4+ 0*12, _BUG4+ 1*12, _BUG4+ 2*12, _BUG4+ 3*12);
 
 var
+  HIT:Byte        absolute $55;
   DINOX:Byte      absolute $60;
   DINOY:Byte      absolute $01;
   DINODX:ShortInt absolute $62;

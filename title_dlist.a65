@@ -7,7 +7,7 @@ dl_s
         dta DL_BLANK8
         dta DL_BLANK8 + DL_DLI
 
-        dta DL_MODE_40x24T5 + DL_LMS, a(SC2_TITLE)  ; 1
+        dta DL_MODE_40x24T5 + DL_LMS, a(SCR2_ADDR)  ; 1
         dta DL_MODE_40x24T5                         ; 2
         dta DL_MODE_40x24T5                         ; 3
         dta DL_MODE_40x24T5                         ; 4

@@ -20,10 +20,10 @@ const
   tmBugsDly   = 6;
   tmFire      = 9;
 
-  sfxDINOSTEP = $14;
   sfxDINOFALL = $11;
-  sfxDINOJUMP = $17;
+  sfxDINOSTEP = $14;
   sfxDINOBUM  = $16;
+  sfxDINOJUMP = $17;
   sfxDINODIE  = $18;
   sfxDINOTAKE = $19;
   sfxDINOCOUT = $1A;
@@ -38,12 +38,12 @@ const
 { 2}    255,
 { 3}    255,
 { 4}    255,
-{ 5}    255,
-{ 6}    255,
+{ 5}      0, {Down-Right}
+{ 6}      0, {Up-Right}
 { 7}      0, { Right }
 { 8}    255,
-{ 9}    255,
-{10}    255,
+{ 9}      2, {Down-Left}
+{10}      2, {Up-Left}
 {11}      2, { Left }
 {12}    255,
 {13}      6, { Down }
@@ -57,12 +57,12 @@ const
 { 2}    0,
 { 3}    0,
 { 4}    0,
-{ 5}    0,
-{ 6}    0,
+{ 5}    2, {Down-Right}
+{ 6}    2, {Up-Right}
 { 7}    2, { Right }
 { 8}    0,
-{ 9}    0,
-{10}    0,
+{ 9}   -2, {Down-Left}
+{10}   -2, {Up-Left}
 {11}   -2, { Left }
 {12}    0,
 {13}    0, { Down }
@@ -76,16 +76,16 @@ const
 { 2}    0,
 { 3}    0,
 { 4}    0,
-{ 5}    0,
-{ 6}    0,
+{ 5}    2, {Down-Right}
+{ 6}   -2, {Up-Right}
 { 7}    0, { Right }
 { 8}    0,
-{ 9}    0,
-{10}    0,
+{ 9}    2, {Down-Left}
+{10}   -2, {Up-Left}
 {11}    0, { Left }
 {12}    0,
-{13}    3, { Down }
-{14}   -3, { Up }
+{13}    2, { Down }
+{14}   -2, { Up }
 {15}    0
   );
 

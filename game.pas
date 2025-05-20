@@ -35,6 +35,11 @@ var
   j:Byte absolute $73;
   k:Byte absolute $74;
 
+  _bugX:Byte;
+  _bug:Byte;
+  _bugType:Byte;
+  _bugDir:Byte;
+
 {$I softspr.pas}
 
 procedure pushRandomBug;
@@ -62,32 +67,19 @@ var
 begin
   ResetBugs;
   fillchar(pointer(SCREEN_ADDR),21*40+8,$45);
-  fillchar(pointer(SC2_TITLE),5*40+8,$0);
-  fillchar(pointer(SC2_TITLE)+5*40+8,16*40+8,$0);
+  fillchar(pointer(SCR2_ADDR),5*40+8,$0);
+  fillchar(pointer(SCR2_ADDR)+5*40+8,16*40+8,$0);
 
-  for tile:=$3a to $3f do
-  begin
-    for i:=0 to 9 do
-    begin
-      repeat
-        x:=RANDOM(40);
-        y:=RANDOM(16);
-        adr:=SC2_TITLE+208+x+y*40;
-      until peek(adr)=0;
-
-      poke(adr,tile);
-    end;
-  end;
-  for i:=0 to 9 do
+  for i:=0 to 4 do
   begin
     tile:=RANDOM(6);
     getCactusTile(tile);
     repeat
       x:=RANDOM(40);
       y:=RANDOM(15);
-      adr:=sc2_title+288;
+      adr:=SCR2_ADDR+288;
     until isFree4Tile(x,y);
-    adr:=sc2_title+288; drawTile(x,y);
+    adr:=SCR2_ADDR+288; drawTile(x,y);
   end;
 
   for i:=0 to 5 do
@@ -97,9 +89,9 @@ begin
     repeat
       x:=RANDOM(40);
       y:=RANDOM(15);
-      adr:=sc2_title+288;
+      adr:=SCR2_ADDR+288;
     until isFree4Tile(x,y);
-    adr:=sc2_title+288; drawTile(x,y);
+    adr:=SCR2_ADDR+288; drawTile(x,y);
   end;
 
   for i:=0 to 15 do
@@ -109,9 +101,23 @@ begin
     repeat
       x:=RANDOM(40);
       y:=RANDOM(15);
-      adr:=sc2_title+328;
+      adr:=SCR2_ADDR+328;
     until isFree4Tile(x,y);
-    adr:=sc2_title+328; drawTile(x,y);
+    adr:=SCR2_ADDR+328; drawTile(x,y);
+  end;
+
+  for tile:=$3a to $3f do
+  begin
+    for i:=0 to 9 do
+    begin
+      repeat
+        x:=RANDOM(40);
+        y:=RANDOM(16);
+        adr:=SCR2_ADDR+208+x+y*40;
+      until peek(adr)=0;
+
+      poke(adr,tile);
+    end;
   end;
 
 end;
@@ -131,7 +137,7 @@ begin
     begin
       v:=peek(FAD_TITLE+j);
       if (v>=i) and (v<k) then
-        poke(adr,Peek(SC2_TITLE+j));
+        poke(adr,Peek(SCR2_ADDR+j));
       inc(adr);
     end;
     adr:=SCREEN_ADDR+44;
@@ -139,7 +145,7 @@ begin
     begin
       v:=peek(FAD_TITLE+j);
       if (v>=i) and (v<k) then
-        poke(adr,Peek(SC2_TITLE+j));
+        poke(adr,Peek(SCR2_ADDR+j));
       inc(adr);
     end;
     adr:=SCREEN_ADDR+88;
@@ -147,7 +153,7 @@ begin
     begin
       v:=peek(FAD_TITLE+j);
       if (v>=i) and (v<k) then
-        poke(adr,Peek(SC2_TITLE+j));
+        poke(adr,Peek(SCR2_ADDR+j));
       inc(adr);
     end;
     v:=i shr 3; if v>6 then v:=6;
@@ -257,6 +263,43 @@ begin
     DINOFrm:=DINOFrm and 2;
   end;
 
+// kolizja PM
+
+  if HIT<>0 then
+  begin
+    if DINOState and (dsFall+dsJump)=0 then
+      sy:=DINOY+15      // tuż pod stopami Dino
+    else
+      sy:=DINOshadowOfs+2;
+    i:=(sy-72) div 16;  // numer robaka
+    x:=DINOX+7;         // pozycja x, prawej strony Dino
+
+    // typ tobaka
+    _bugType:=bugType[i] shr 2;
+    case _bugType of
+      0: // mrówka
+      begin
+        j:=72+i*16+10;  // pozycja y, góry mrówki
+        k:=j+5;         // pozycja y, dołu mrówki
+        if (sy>=j) and (sy<=k) then
+        begin
+          j:=BugX[i];   // pozycja x, lewej strony robaka
+          k:=j+7;       // pozycja x, prawej strony robaka
+
+          if ((j>=DINOX) and (j<=x)) or
+            ((k>=DINOX) and (k<=x)) then
+          begin // dino jest na mrówce
+            if DINOState and dsFall<>0 then
+            begin
+              BugX[i]:=0;
+              PlaySFX(sfxDINOCOUT);
+            end;
+          end;
+      end;
+      end;
+    end;
+  end;
+
   if DINOState and dsNone<>0 then exit;
   if timer[tmDinoAnim]>0 then exit;
   timer[tmDinoAnim]:=3;
@@ -334,8 +377,6 @@ begin
     end
     else
       fireReleased:=True;
-
-
     oJoyFire:=joyFire;
   end
   else
@@ -420,11 +461,9 @@ begin
       MultiP[0]:=0;
       MultiP[1]:=0;
       pteroState:=255; // status ptero wyłączony
-{$IFNDEF QUICK}
+
       timer[tmPteroDly]:=25+Random(200); // losowanie nowego czasu na pokazanie się ptero
-{$ELSE}
-      timer[tmPteroDly]:=10; // losowanie nowego czasu na pokazanie się ptero
-{$ENDIF}
+
     end;
   end;
 end;
@@ -499,12 +538,6 @@ begin
 end;
 
 procedure BugAnim;
-var
-  _bugX:Byte;
-  _bug:Byte;
-  _bugType:Byte;
-  _bugDir:Byte;
-
 begin
   if gameState=2 then Exit;
   if timer[tmBugsAnim]=0 then
@@ -593,7 +626,7 @@ begin
 {$ELSE}
   poke($5f,$16);
   msx.Init($d);
-  move(pointer(SC2_TITLE),pointer(SCREEN_ADDR),21*40+8);
+  move(pointer(SCR2_ADDR),pointer(SCREEN_ADDR),21*40+8);
 {$ENDIF}
   DINOX:=128;  DINOY:=128;
 

@@ -48,8 +48,10 @@ begin
   putSTONE;
 end;
 
-//  HIT:=peek($d004) or peek($d000);
-//  poke($d01e,0);
+HIT:=peek($d00d) or //  Player 1 to player collision
+     peek($d009);   //  Missile 1 to player collision
+HIT:=HIT and %1100;
+poke($d01e,0);
 
 
   asm

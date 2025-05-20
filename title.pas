@@ -9,7 +9,7 @@ begin
 
   FCOL[4]:=$00; FCOL[0]:=$14; FCOL[1]:=$16; FCOL[2]:=$1e; FCOL[3]:=$0f;
 
-  fillchar(pointer(SC2_TITLE),960,0);
+  fillchar(pointer(SCR2_ADDR),960,0);
   PMGClear;
 
   turnOn(@VBL_Title_Screen,@DLI_Title_Screen,%111110);
@@ -29,7 +29,7 @@ begin
     begin
       v:=peek(FAD_TITLE+j);
       if (v>=i) and (v<i+FADE_STEP) then
-        poke(SC2_TITLE+j,Peek(SCR_TITLE+j));
+        poke(SCR2_ADDR+j,Peek(SCR_TITLE+j));
     end;
     inc(i,FADE_STEP);
     if volFade then
@@ -53,7 +53,7 @@ begin
     begin
       v:=peek(FAD_TITLE+j);
       if (v>=i) and (v<i+FADE_STEP) then
-        poke(SC2_TITLE+j,0);
+        poke(SCR2_ADDR+j,0);
     end;
     inc(i,FADE_STEP);
     setGlobalVolume(63-i);
@@ -68,7 +68,7 @@ begin
   msx.Init($0);
   title_fadeIn(startVol);
 {$ELSE}
-  move(pointer(SCR_TITLE),pointer(SC2_TITLE),960);
+  move(pointer(SCR_TITLE),pointer(SCR2_ADDR),960);
 {$ENDIF}
   repeat
 

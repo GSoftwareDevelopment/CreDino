@@ -1,7 +1,7 @@
 FNT_TITLE     = $9000;
 SCR_TITLE     = $9800;
 FAD_TITLE     = $9c00;
-SC2_TITLE     = $8000;
+SCR2_ADDR     = $8000;
 
 RMT_PLAYER    = $8c00;
 
